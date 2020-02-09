@@ -149,7 +149,7 @@ namespace SoundIO
         }
 
         [StructLayout(LayoutKind.Sequential)]
-        public struct Instance
+        public struct Context
         {
             public IntPtr Userdata;
             IntPtr _onDevicesChange;
@@ -158,9 +158,9 @@ namespace SoundIO
             public Backend CurrentBackend;
             IntPtr _appName;
 
-            public delegate void OnDevicesChangeCallback(ref Instance instance);
-            public delegate void OnBackendDisconnectCallback(ref Instance instance, Error error);
-            public delegate void OnEventsSignalCallback(ref Instance instance);
+            public delegate void OnDevicesChangeCallback(ref Context context);
+            public delegate void OnBackendDisconnectCallback(ref Context context, Error error);
+            public delegate void OnEventsSignalCallback(ref Context context);
 
             public OnDevicesChangeCallback OnDevicesChange
             {
@@ -186,7 +186,7 @@ namespace SoundIO
         [StructLayout(LayoutKind.Sequential)]
         public struct Device
         {
-            IntPtr _instance;
+            IntPtr _context;
             IntPtr _id;
             IntPtr _name;
             public DeviceAim Aim;
@@ -288,22 +288,22 @@ namespace SoundIO
         #region Context functions
 
         [DllImport("libsoundio.dll", EntryPoint="soundio_create")]
-        public extern static Instance* Create();
+        public extern static Context* Create();
 
         [DllImport("libsoundio.dll", EntryPoint="soundio_destroy")]
-        public extern static void Destroy(Instance* instance);
+        public extern static void Destroy(Context* context);
 
         [DllImport("libsoundio.dll", EntryPoint="soundio_connect")]
-        public extern static Error Connect(Instance* instance);
+        public extern static Error Connect(Context* context);
 
         [DllImport("libsoundio.dll", EntryPoint="soundio_connect_backend")]
-        public extern static Error Connect(Instance* instance, Backend backend);
+        public extern static Error Connect(Context* context, Backend backend);
 
         [DllImport("libsoundio.dll", EntryPoint="soundio_disconnect")]
-        public extern static void Disconnect(Instance* instance);
+        public extern static void Disconnect(Context* context);
 
         [DllImport("libsoundio.dll", EntryPoint="soundio_flush_events")]
-        public extern static void FlushEvents(Instance* instance);
+        public extern static void FlushEvents(Context* context);
 
         #endregion
 
@@ -320,22 +320,22 @@ namespace SoundIO
         #region Device operations
 
         [DllImport("libsoundio.dll", EntryPoint="soundio_output_device_count")]
-        public extern static int OutputDeviceCount(Instance* instance);
+        public extern static int OutputDeviceCount(Context* context);
 
         [DllImport("libsoundio.dll", EntryPoint="soundio_input_device_count")]
-        public extern static int InputDeviceCount(Instance* instance);
+        public extern static int InputDeviceCount(Context* context);
 
         [DllImport("libsoundio.dll", EntryPoint="soundio_get_input_device")]
-        public extern static Device* GetInputDevice(Instance* instance, int index);
+        public extern static Device* GetInputDevice(Context* context, int index);
 
         [DllImport("libsoundio.dll", EntryPoint="soundio_get_output_device")]
-        public extern static Device* GetOutputDevice(Instance* instance, int index);
+        public extern static Device* GetOutputDevice(Context* context, int index);
 
         [DllImport("libsoundio.dll", EntryPoint="soundio_default_input_device_index")]
-        public extern static int DefaultInputDeviceIndex(Instance* instance);
+        public extern static int DefaultInputDeviceIndex(Context* context);
 
         [DllImport("libsoundio.dll", EntryPoint="soundio_default_output_device_index")]
-        public extern static int DefaultOutputDeviceIndex(Instance* instance);
+        public extern static int DefaultOutputDeviceIndex(Context* context);
 
         [DllImport("libsoundio.dll", EntryPoint="soundio_device_ref")]
         public extern static void Ref(Device* device);
@@ -400,7 +400,7 @@ namespace SoundIO
         #region Ring buffer operations
 
         [DllImport("libsoundio.dll", EntryPoint="soundio_ring_buffer_create")]
-        public extern static RingBuffer* RingBufferCreate(Instance* instance, int capacity);
+        public extern static RingBuffer* RingBufferCreate(Context* context, int capacity);
 
         [DllImport("libsoundio.dll", EntryPoint="soundio_ring_buffer_destroy")]
         public extern static void Destroy(RingBuffer* buffer);

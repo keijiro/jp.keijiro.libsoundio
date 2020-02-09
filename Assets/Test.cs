@@ -8,7 +8,7 @@ public unsafe sealed class Test : MonoBehaviour
 {
     static int _counter;
 
-    SIO.Instance* sio;
+    SIO.Context* sio;
     SIO.Device* dev;
     SIO.InStream* ins;
     SIO.RingBuffer* ring;
@@ -45,7 +45,7 @@ public unsafe sealed class Test : MonoBehaviour
         {
             sio = SIO.Create();
             if (sio == null)
-                throw new InvalidOp("Can't create soundio instance.");
+                throw new InvalidOp("Can't create soundio context.");
 
             SIO.Connect(sio);
             SIO.FlushEvents(sio);
