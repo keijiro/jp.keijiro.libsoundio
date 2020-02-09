@@ -1,20 +1,15 @@
 using UnityEngine;
-using IntPtr = System.IntPtr;
 using InvalidOp = System.InvalidOperationException;
-using Marshal = System.Runtime.InteropServices.Marshal;
-using SIO = SoundIO.Unmanaged;
-using Unsafe = System.Runtime.CompilerServices.Unsafe;
+using SIO = SoundIO.NativeMethods;
 
-public unsafe sealed class Test : MonoBehaviour
+public sealed class Test : MonoBehaviour
 {
-    static int _counter;
+    SIO.Context _sio;
+    SIO.Device _dev;
+    SIO.InStream _ins;
+    SIO.RingBuffer _ring;
 
-    SIO.Context* p_sio;
-    SIO.Device* p_dev;
-    SIO.InStream* p_ins;
-    SIO.RingBuffer* p_ring;
-
-    static void OnReadInStream(ref SIO.InStream stream, int frameCountMin, int frameCountMax)
+    unsafe static void OnReadInStream(ref SIO.InStreamData stream, int frameCountMin, int frameCountMax)
     {
         var frameLeft = frameCountMax;
         SIO.ChannelArea* areas;
@@ -27,88 +22,70 @@ public unsafe sealed class Test : MonoBehaviour
             if (frameCount == 0) break;
             SIO.EndRead(ref stream);
             frameLeft -= frameCount;
-
-            _counter++;
         }
     }
 
-    static void OnOverflowInStream(ref SIO.InStream stream)
+    static void OnOverflowInStream(ref SIO.InStreamData stream)
     {
     }
 
-    static void OnErrorInStream(ref SIO.InStream stream, SIO.Error error)
+    static void OnErrorInStream(ref SIO.InStreamData stream, SIO.Error error)
     {
     }
 
-    unsafe void Start()
+    void Start()
     {
-        try
-        {
-            p_sio = SIO.Create();
-            if (p_sio == null)
-                throw new InvalidOp("Can't create soundio context.");
+        _sio = SIO.Create();
 
-            ref var sio = ref Unsafe.AsRef<SIO.Context>(p_sio);
+        if (_sio?.IsInvalid ?? true)
+            throw new InvalidOp("Can't create soundio context.");
 
-            SIO.Connect(ref sio);
-            SIO.FlushEvents(ref sio);
+        SIO.Connect(_sio);
+        SIO.FlushEvents(_sio);
 
-            p_dev = SIO.GetInputDevice(ref sio, SIO.DefaultInputDeviceIndex(ref sio));
-            if (p_dev == null)
-                throw new InvalidOp("Can't open the default input device.");
+        _dev = SIO.GetInputDevice(_sio, SIO.DefaultInputDeviceIndex(_sio));
 
-            ref var dev = ref Unsafe.AsRef<SIO.Device>(p_dev);
+        if (_dev?.IsInvalid ?? true)
+            throw new InvalidOp("Can't open the default input device.");
+        if (_dev.Data.ProbeError != SIO.Error.None)
+            throw new InvalidOp("Unable to probe device ({_dev.Data.ProbeError})");
 
-            if (dev.ProbeError != SIO.Error.None)
-                throw new InvalidOp("Unable to probe device ({dev.ProbeError})");
+        SIO.SortChannelLayouts(_dev);
 
-            SIO.SortChannelLayouts(ref dev);
+        _ins = SIO.InStreamCreate(_dev);
 
-            p_ins = SIO.InStreamCreate(ref dev);
-            if (p_ins == null)
-                throw new InvalidOp("Can't create an input stream.");
+        if (_ins?.IsInvalid ?? true)
+            throw new InvalidOp("Can't create an input stream.");
 
-            ref var ins = ref Unsafe.AsRef<SIO.InStream>(p_ins);
+        _ins.Data.Format = SoundIO.Format.Float32LE;
+        _ins.Data.SampleRate = 48000;
 
-            ins.Format = SoundIO.Format.Float32LE;
-            ins.SampleRate = 48000;
+        _ins.Data.Layout = SIO.ChannelLayoutGetBuiltin(SoundIO.ChannelLayoutID._7Point0);
+        _ins.Data.SoftwareLatency = 0.2;
 
-            ins.Layout = SIO.ChannelLayoutGetBuiltin(SoundIO.ChannelLayoutID._7Point0);
-            ins.SoftwareLatency = 0.2;
+        _ins.Data.OnRead = OnReadInStream;
+        _ins.Data.OnOverflow = OnOverflowInStream;
+        _ins.Data.OnError = OnErrorInStream;
 
-            ins.OnRead = OnReadInStream;
-            ins.OnOverflow = OnOverflowInStream;
-            ins.OnError = OnErrorInStream;
+        var err = SIO.Open(_ins);
+        if (err != SIO.Error.None)
+            throw new InvalidOp($"Can't open an input stream ({err})");
 
-            var err = SIO.Open(ref ins);
-            if (err != SIO.Error.None)
-                throw new InvalidOp($"Can't open an input stream ({err})");
+        _ring = SIO.RingBufferCreate(_sio, 128 * 1024);
 
-            p_ring = SIO.RingBufferCreate(ref sio, 4 * 1024 * 1024);
-
-            SIO.Start(ref ins);
-        }
-        catch (InvalidOp e)
-        {
-            Debug.LogError(e);
-        }
-        finally
-        {
-        }
+        SIO.Start(_ins);
     }
 
     void Update()
     {
-        ref var sio = ref Unsafe.AsRef<SIO.Context>(p_sio);
-        SIO.FlushEvents(ref sio);
-        //Debug.Log($"End {_counter}");
+        if (!_sio?.IsInvalid ?? false) SIO.FlushEvents(_sio);
     }
 
     void OnDestroy()
     {
-        if (p_ins != null) SIO.Destroy(p_ins);
-        if (p_ring != null) SIO.Destroy(p_ring);
-        if (p_dev != null) SIO.Unref(p_dev);
-        if (p_sio != null) SIO.Destroy(p_sio);
+        if (!_ins ?.IsInvalid ?? false) _ins.Close();
+        if (!_ring?.IsInvalid ?? false) _ring.Close();
+        if (!_dev ?.IsInvalid ?? false) _dev.Close();
+        if (!_sio ?.IsInvalid ?? false) _sio.Close();
     }
 }
