@@ -4,30 +4,43 @@ using InvalidOp = System.InvalidOperationException;
 using Marshal = System.Runtime.InteropServices.Marshal;
 using SIO = SoundIO.Unmanaged;
 
-public sealed class Test : MonoBehaviour
+public unsafe sealed class Test : MonoBehaviour
 {
     static int _counter;
 
-    unsafe void ReadCallback(SIO.InStream* stream, int frameCountMin, int frameCountMax)
+    SIO.Instance* sio;
+    SIO.Device* dev;
+    SIO.InStream* ins;
+    SIO.RingBuffer* ring;
+
+    static void OnReadInStream(ref SIO.InStream stream, int frameCountMin, int frameCountMax)
     {
-        _counter++;
+        var frameLeft = frameCountMax;
+        SIO.ChannelArea* areas;
+
+        while (frameLeft > 0)
+        {
+            var frameCount = frameLeft;
+            SIO.BeginRead(ref stream, out areas, ref frameCount);
+            Debug.Log($"{frameCount} / {frameLeft}");
+            if (frameCount == 0) break;
+            SIO.EndRead(ref stream);
+            frameLeft -= frameCount;
+
+            _counter++;
+        }
     }
 
-    unsafe void OverflowCallback(SIO.InStream* stream)
+    static void OnOverflowInStream(ref SIO.InStream stream)
     {
     }
 
-    unsafe void ErrorCallback(SIO.InStream* stream, SIO.Error error)
+    static void OnErrorInStream(ref SIO.InStream stream, SIO.Error error)
     {
     }
 
     unsafe void Start()
     {
-        SIO.Instance* sio = null;
-        SIO.Device* dev = null;
-        SIO.InStream* ins = null;
-        SIO.RingBuffer* ring = null;
-
         try
         {
             sio = SIO.Create();
@@ -41,8 +54,8 @@ public sealed class Test : MonoBehaviour
             if (dev == null)
                 throw new InvalidOp("Can't open the default input device.");
 
-            if (dev->probeError != SIO.Error.None)
-                throw new InvalidOp("Unable to probe device ({dev->probeError})");
+            if (dev->ProbeError != SIO.Error.None)
+                throw new InvalidOp("Unable to probe device ({dev->ProbeError})");
 
             SIO.SortChannelLayouts(dev);
 
@@ -50,30 +63,23 @@ public sealed class Test : MonoBehaviour
             if (ins == null)
                 throw new InvalidOp("Can't create an input stream.");
 
-            ins->format = SoundIO.Format.Float32LE;
-            ins->sampleRate = 48000;
+            ins->Format = SoundIO.Format.Float32LE;
+            ins->SampleRate = 48000;
 
-            ins->layout = *SIO.ChannelLayoutGetBuiltin(SoundIO.ChannelLayoutID._7Point0);
-            ins->softwareLatency = 0.2;
+            ins->Layout = *SIO.ChannelLayoutGetBuiltin(SoundIO.ChannelLayoutID._7Point0);
+            ins->SoftwareLatency = 0.2;
 
-            ins->readCallback = Marshal.GetFunctionPointerForDelegate(new SIO.ReadCallback(ReadCallback));
-            ins->overflowCallback = Marshal.GetFunctionPointerForDelegate(new SIO.OverflowCallback(OverflowCallback));
-            ins->errorCallback = Marshal.GetFunctionPointerForDelegate(new SIO.ErrorCallback(ErrorCallback));
-            ins->userData = null;
+            ins->OnRead = OnReadInStream;
+            ins->OnOverflow = OnOverflowInStream;
+            ins->OnError = OnErrorInStream;
 
             var err = SIO.Open(ins);
             if (err != SIO.Error.None)
                 throw new InvalidOp($"Can't open an input stream ({err})");
 
-            ring = SIO.RingBufferCreate(sio, 4 * 1024 * 1024);
+            //ring = SIO.RingBufferCreate(sio, 4 * 1024 * 1024);
 
             SIO.Start(ins);
-
-            Debug.Log("Start");
-
-            System.Threading.Thread.Sleep(3000);
-
-            Debug.Log($"End {_counter}");
         }
         catch (InvalidOp e)
         {
@@ -81,10 +87,20 @@ public sealed class Test : MonoBehaviour
         }
         finally
         {
-            if (ins != null) SIO.Destroy(ins);
-            if (ring != null) SIO.Destroy(ring);
-            if (dev != null) SIO.UnrefDevice(dev);
-            if (sio != null) SIO.Destroy(sio);
         }
+    }
+
+    void Update()
+    {
+        SIO.FlushEvents(sio);
+        //Debug.Log($"End {_counter}");
+    }
+
+    void OnDestroy()
+    {
+        if (ins != null) SIO.Destroy(ins);
+        if (ring != null) SIO.Destroy(ring);
+        if (dev != null) SIO.Unref(dev);
+        if (sio != null) SIO.Destroy(sio);
     }
 }

@@ -1,3 +1,4 @@
+using System;
 using System.Runtime.InteropServices;
 
 namespace SoundIO
@@ -116,125 +117,175 @@ namespace SoundIO
 
         public enum DeviceAim { Input, Output };
 
-        const int MAX_CHANNELS = 24;
-
         [StructLayout(LayoutKind.Sequential)]
         public struct ChannelLayout
         {
-            public byte* name;
-            public int channelCount;
-            public fixed int channels[MAX_CHANNELS];
+            const int MaxChannels = 24;
+
+            IntPtr _name;
+            public int ChannelCount;
+            fixed int _channels[MaxChannels];
+
+            public string Name => Marshal.PtrToStringAnsi(_name);
+
+            public ReadOnlySpan<Channel> Channels { get {
+                fixed (ChannelLayout* p = &this)
+                    return new ReadOnlySpan<Channel>(p->_channels, ChannelCount);
+            } }
         }
 
         [StructLayout(LayoutKind.Sequential)]
         public struct SampleRateRange
         {
-            public int min;
-            public int max;
+            public int Min;
+            public int Max;
         }
 
         [StructLayout(LayoutKind.Sequential)]
         public struct ChannelArea
         {
-            public byte* ptr;
-            public int step;
+            public IntPtr Pointer;
+            public int Step;
         }
 
         [StructLayout(LayoutKind.Sequential)]
         public struct Instance
         {
-            public void* userdata;
-            void* onDevicesChange;
-            void* onBackendDisconnect;
-            void* onEventsSignal;
-            public Backend currentBackend;
-            public byte* appName;
+            public IntPtr Userdata;
+            IntPtr _onDevicesChange;
+            IntPtr _onBackendDisconnect;
+            IntPtr _onEventsSignal;
+            public Backend CurrentBackend;
+            IntPtr _appName;
+
+            public delegate void OnDevicesChangeCallback(ref Instance instance);
+            public delegate void OnBackendDisconnectCallback(ref Instance instance, Error error);
+            public delegate void OnEventsSignalCallback(ref Instance instance);
+
+            public OnDevicesChangeCallback OnDevicesChange
+            {
+                get => Marshal.GetDelegateForFunctionPointer<OnDevicesChangeCallback>(_onDevicesChange);
+                set => _onDevicesChange = Marshal.GetFunctionPointerForDelegate(new OnDevicesChangeCallback(value));
+            }
+
+            public OnBackendDisconnectCallback OnBackendDisconnect
+            {
+                get => Marshal.GetDelegateForFunctionPointer<OnBackendDisconnectCallback>(_onBackendDisconnect);
+                set => _onBackendDisconnect = Marshal.GetFunctionPointerForDelegate(new OnBackendDisconnectCallback(value));
+            }
+
+            public OnEventsSignalCallback OnEventSignal
+            {
+                get => Marshal.GetDelegateForFunctionPointer<OnEventsSignalCallback>(_onEventsSignal);
+                set => _onEventsSignal = Marshal.GetFunctionPointerForDelegate(new OnEventsSignalCallback(value));
+            }
+
+            public string AppName => Marshal.PtrToStringAnsi(_appName);
         }
 
         [StructLayout(LayoutKind.Sequential)]
         public struct Device
         {
-            Instance* instance;
+            IntPtr _instance;
+            IntPtr _id;
+            IntPtr _name;
+            public DeviceAim Aim;
 
-            public byte* id;
-            public byte* name;
+            IntPtr _layouts;
+            int _layoutCount;
+            public ChannelLayout CurrentLayout;
 
-            public DeviceAim aim;
+            IntPtr _formats;
+            int _formatCount;
+            public Format CurrentFormat;
 
-            public ChannelLayout* layouts;
-            public int layoutCount;
-            public ChannelLayout currentLayout;
+            IntPtr _sampleRates;
+            int _sampleRateCount;
+            public int SampleRateCurent;
 
-            public Format* formats;
-            public int formatCount;
-            public Format currentFormat;
+            public double SoftwareLatencyMin;
+            public double SoftwareLatencyMax;
+            public double SoftwareLatencyCurrent;
 
-            public SampleRateRange* sampleRates;
-            public int sampleRateCount;
-            public int sampleRateCurent;
+            byte _isRaw;
+            int _refCount;
+            Error _probeError;
 
-            public double softwareLatencyMin;
-            public double softwareLatencyMax;
-            public double softwareLatencyCurrent;
+            public string Name => Marshal.PtrToStringAnsi(_name);
+            public string ID => Marshal.PtrToStringAnsi(_id);
 
-            [MarshalAs(UnmanagedType.U1)]
-            public bool isRaw;
-            public int refCount;
-            public Error probeError;
-        }
+            public Span<ChannelLayout> Layouts =>
+                new Span<ChannelLayout>((void*)_layouts, _layoutCount);
 
-        [StructLayout(LayoutKind.Sequential)]
-        public struct OutStream
-        {
-            public Device* device;
-            public Format format;
-            public int sampleRate;
-            public ChannelLayout layout;
-            public double softwareLatency;
-            public float volume;
-            public void* userData;
+            public Span<Format> Formats =>
+                new Span<Format>((void*)_formats, _formatCount);
 
-            public void* writeCallback;
-            public void* underflowCallback;
-            public void* errorCallback;
+            public Span<int> SampleRates =>
+                new Span<int>((void*)_sampleRates, _sampleRateCount);
 
-            public byte* name;
-            [MarshalAs(UnmanagedType.U1)]
-            public bool nonTerminalHint;
-
-            public int bytesPerFrame;
-            public int bytesPerSample;
-            public int layoutError;
+            public bool IsRaw => _isRaw != 0;
+            public Error ProbeError => _probeError;
         }
 
         [StructLayout(LayoutKind.Sequential)]
         public struct InStream
         {
-            public Device* device;
-            public Format format;
-            public int sampleRate;
-            public ChannelLayout layout;
-            public double softwareLatency;
-            public void* userData;
+            IntPtr _device;
+            public Format Format;
+            public int SampleRate;
+            public ChannelLayout Layout;
+            public double SoftwareLatency;
+            public IntPtr UserData;
+            IntPtr _readCallback;
+            IntPtr _overflowCallback;
+            IntPtr _errorCallback;
+            IntPtr _name;
+            byte _nonTerminalHint;
+            public int BytesPerFrame;
+            public int BytesPerSample;
+            Error _layoutError;
 
-            public System.IntPtr readCallback;
-            public System.IntPtr overflowCallback;
-            public System.IntPtr errorCallback;
+            [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+            public delegate void ReadCallback(ref InStream stream, int frameCountMin, int frameCountMax);
 
-            public byte* name;
-            [MarshalAs(UnmanagedType.U1)]
-            public bool nonTerminalHint;
+            [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+            public delegate void OverflowCallback(ref InStream stream);
 
-            public int bytesPerFrame;
-            public int bytesPerSample;
-            public int layoutError;
+            [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+            public delegate void ErrorCallback(ref InStream stream, Error error);
+
+            public ReadCallback OnRead
+            {
+                get => Marshal.GetDelegateForFunctionPointer<ReadCallback>(_readCallback);
+                set => _readCallback = Marshal.GetFunctionPointerForDelegate(value);
+            }
+
+            public OverflowCallback OnOverflow
+            {
+                get => Marshal.GetDelegateForFunctionPointer<OverflowCallback>(_overflowCallback);
+                set => _overflowCallback = Marshal.GetFunctionPointerForDelegate(value);
+            }
+
+            public ErrorCallback OnError
+            {
+                get => Marshal.GetDelegateForFunctionPointer<ErrorCallback>(_errorCallback);
+                set => _errorCallback = Marshal.GetFunctionPointerForDelegate(value);
+            }
+
+            public bool NonTerminalHint
+            {
+                get => _nonTerminalHint != 0;
+                set => _nonTerminalHint = value ? (byte)1 : (byte)0;
+            }
+
+            public string Name => Marshal.PtrToStringAnsi(_name);
+
+            public Error LayoutError => _layoutError;
         }
 
         public struct RingBuffer { }
 
-        public delegate void ReadCallback(InStream* stream, int frameCountMin, int frameCountMax);
-        public delegate void OverflowCallback(InStream* stream);
-        public delegate void ErrorCallback(InStream* stream, Error error);
+        #region Context functions
 
         [DllImport("libsoundio.dll", EntryPoint="soundio_create")]
         public extern static Instance* Create();
@@ -254,17 +305,25 @@ namespace SoundIO
         [DllImport("libsoundio.dll", EntryPoint="soundio_flush_events")]
         public extern static void FlushEvents(Instance* instance);
 
+        #endregion
+
+        #region Channel layout
+
+        [DllImport("libsoundio.dll", EntryPoint="soundio_channel_layout_builtin_count")]
+        public extern static int ChannelLayoutBuiltinCount();
+
+        [DllImport("libsoundio.dll", EntryPoint="soundio_channel_layout_get_builtin")]
+        public extern static ChannelLayout* ChannelLayoutGetBuiltin(ChannelLayoutID id);
+
+        #endregion
+
+        #region Device operations
+
         [DllImport("libsoundio.dll", EntryPoint="soundio_output_device_count")]
         public extern static int OutputDeviceCount(Instance* instance);
 
         [DllImport("libsoundio.dll", EntryPoint="soundio_input_device_count")]
         public extern static int InputDeviceCount(Instance* instance);
-
-        [DllImport("libsoundio.dll", EntryPoint="soundio_default_output_device_index")]
-        public extern static int DefaultOutputDeviceIndex(Instance* instance);
-
-        [DllImport("libsoundio.dll", EntryPoint="soundio_default_input_device_index")]
-        public extern static int DefaultInputDeviceIndex(Instance* instance);
 
         [DllImport("libsoundio.dll", EntryPoint="soundio_get_input_device")]
         public extern static Device* GetInputDevice(Instance* instance, int index);
@@ -272,8 +331,21 @@ namespace SoundIO
         [DllImport("libsoundio.dll", EntryPoint="soundio_get_output_device")]
         public extern static Device* GetOutputDevice(Instance* instance, int index);
 
+        [DllImport("libsoundio.dll", EntryPoint="soundio_default_input_device_index")]
+        public extern static int DefaultInputDeviceIndex(Instance* instance);
+
+        [DllImport("libsoundio.dll", EntryPoint="soundio_default_output_device_index")]
+        public extern static int DefaultOutputDeviceIndex(Instance* instance);
+
+        [DllImport("libsoundio.dll", EntryPoint="soundio_device_ref")]
+        public extern static void Ref(Device* device);
+
         [DllImport("libsoundio.dll", EntryPoint="soundio_device_unref")]
-        public extern static void UnrefDevice(Device* device);
+        public extern static void Unref(Device* device);
+
+        [DllImport("libsoundio.dll", EntryPoint="soundio_device_equal")]
+        [return: MarshalAs(UnmanagedType.U1)]
+        public extern static bool Equal(Device* a, Device* b);
 
         [DllImport("libsoundio.dll", EntryPoint="soundio_device_sort_channel_layouts")]
         public extern static void SortChannelLayouts(Device* device);
@@ -282,6 +354,10 @@ namespace SoundIO
         [return: MarshalAs(UnmanagedType.U1)]
         public extern static bool SupportsFormat(Device* device, Format format);
 
+        [DllImport("libsoundio.dll", EntryPoint="soundio_device_supports_layout")]
+        [return: MarshalAs(UnmanagedType.U1)]
+        public extern static bool SupportsLayout(Device* device, in ChannelLayout layout);
+
         [DllImport("libsoundio.dll", EntryPoint="soundio_device_supports_sample_rate")]
         [return: MarshalAs(UnmanagedType.U1)]
         public extern static bool SupportsSampleRate(Device* device, int sampleRate);
@@ -289,11 +365,7 @@ namespace SoundIO
         [DllImport("libsoundio.dll", EntryPoint="soundio_device_nearest_sample_rate")]
         public extern static int NearestSampleRate(Device* device, int sampleRate);
 
-        [DllImport("libsoundio.dll", EntryPoint="soundio_channel_layout_builtin_count")]
-        public extern static int ChannelLayoutBuiltinCount();
-
-        [DllImport("libsoundio.dll", EntryPoint="soundio_channel_layout_get_builtin")]
-        public extern static ChannelLayout* ChannelLayoutGetBuiltin(ChannelLayoutID id);
+        #endregion
 
         #region InStream operations
 
@@ -308,6 +380,20 @@ namespace SoundIO
 
         [DllImport("libsoundio.dll", EntryPoint="soundio_instream_start")]
         public extern static Error Start(InStream* stream);
+
+        [DllImport("libsoundio.dll", EntryPoint="soundio_instream_begin_read")]
+        public extern static Error
+            BeginRead(ref InStream stream, out ChannelArea* areas, ref int frameCount);
+
+        [DllImport("libsoundio.dll", EntryPoint="soundio_instream_end_read")]
+        public extern static Error EndRead(ref InStream stream);
+
+        [DllImport("libsoundio.dll", EntryPoint="soundio_instream_pause")]
+        public extern static Error
+            Pause(InStream* stream, [MarshalAs(UnmanagedType.U1)] bool pause);
+
+        [DllImport("libsoundio.dll", EntryPoint="soundio_instream_get_latency")]
+        public extern static Error GetLatency(InStream* stream, out double latency);
 
         #endregion
 
