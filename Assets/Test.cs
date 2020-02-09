@@ -3,15 +3,16 @@ using IntPtr = System.IntPtr;
 using InvalidOp = System.InvalidOperationException;
 using Marshal = System.Runtime.InteropServices.Marshal;
 using SIO = SoundIO.Unmanaged;
+using Unsafe = System.Runtime.CompilerServices.Unsafe;
 
 public unsafe sealed class Test : MonoBehaviour
 {
     static int _counter;
 
-    SIO.Context* sio;
-    SIO.Device* dev;
-    SIO.InStream* ins;
-    SIO.RingBuffer* ring;
+    SIO.Context* p_sio;
+    SIO.Device* p_dev;
+    SIO.InStream* p_ins;
+    SIO.RingBuffer* p_ring;
 
     static void OnReadInStream(ref SIO.InStream stream, int frameCountMin, int frameCountMax)
     {
@@ -43,43 +44,49 @@ public unsafe sealed class Test : MonoBehaviour
     {
         try
         {
-            sio = SIO.Create();
-            if (sio == null)
+            p_sio = SIO.Create();
+            if (p_sio == null)
                 throw new InvalidOp("Can't create soundio context.");
 
-            SIO.Connect(sio);
-            SIO.FlushEvents(sio);
+            ref var sio = ref Unsafe.AsRef<SIO.Context>(p_sio);
 
-            dev = SIO.GetInputDevice(sio, SIO.DefaultInputDeviceIndex(sio));
-            if (dev == null)
+            SIO.Connect(ref sio);
+            SIO.FlushEvents(ref sio);
+
+            p_dev = SIO.GetInputDevice(ref sio, SIO.DefaultInputDeviceIndex(ref sio));
+            if (p_dev == null)
                 throw new InvalidOp("Can't open the default input device.");
 
-            if (dev->ProbeError != SIO.Error.None)
-                throw new InvalidOp("Unable to probe device ({dev->ProbeError})");
+            ref var dev = ref Unsafe.AsRef<SIO.Device>(p_dev);
 
-            SIO.SortChannelLayouts(dev);
+            if (dev.ProbeError != SIO.Error.None)
+                throw new InvalidOp("Unable to probe device ({dev.ProbeError})");
 
-            ins = SIO.InStreamCreate(dev);
-            if (ins == null)
+            SIO.SortChannelLayouts(ref dev);
+
+            p_ins = SIO.InStreamCreate(ref dev);
+            if (p_ins == null)
                 throw new InvalidOp("Can't create an input stream.");
 
-            ins->Format = SoundIO.Format.Float32LE;
-            ins->SampleRate = 48000;
+            ref var ins = ref Unsafe.AsRef<SIO.InStream>(p_ins);
 
-            ins->Layout = *SIO.ChannelLayoutGetBuiltin(SoundIO.ChannelLayoutID._7Point0);
-            ins->SoftwareLatency = 0.2;
+            ins.Format = SoundIO.Format.Float32LE;
+            ins.SampleRate = 48000;
 
-            ins->OnRead = OnReadInStream;
-            ins->OnOverflow = OnOverflowInStream;
-            ins->OnError = OnErrorInStream;
+            ins.Layout = SIO.ChannelLayoutGetBuiltin(SoundIO.ChannelLayoutID._7Point0);
+            ins.SoftwareLatency = 0.2;
 
-            var err = SIO.Open(ins);
+            ins.OnRead = OnReadInStream;
+            ins.OnOverflow = OnOverflowInStream;
+            ins.OnError = OnErrorInStream;
+
+            var err = SIO.Open(ref ins);
             if (err != SIO.Error.None)
                 throw new InvalidOp($"Can't open an input stream ({err})");
 
-            //ring = SIO.RingBufferCreate(sio, 4 * 1024 * 1024);
+            p_ring = SIO.RingBufferCreate(ref sio, 4 * 1024 * 1024);
 
-            SIO.Start(ins);
+            SIO.Start(ref ins);
         }
         catch (InvalidOp e)
         {
@@ -92,15 +99,16 @@ public unsafe sealed class Test : MonoBehaviour
 
     void Update()
     {
-        SIO.FlushEvents(sio);
+        ref var sio = ref Unsafe.AsRef<SIO.Context>(p_sio);
+        SIO.FlushEvents(ref sio);
         //Debug.Log($"End {_counter}");
     }
 
     void OnDestroy()
     {
-        if (ins != null) SIO.Destroy(ins);
-        if (ring != null) SIO.Destroy(ring);
-        if (dev != null) SIO.Unref(dev);
-        if (sio != null) SIO.Destroy(sio);
+        if (p_ins != null) SIO.Destroy(p_ins);
+        if (p_ring != null) SIO.Destroy(p_ring);
+        if (p_dev != null) SIO.Unref(p_dev);
+        if (p_sio != null) SIO.Destroy(p_sio);
     }
 }
