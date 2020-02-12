@@ -101,7 +101,7 @@ public sealed class Test : MonoBehaviour
         _ins.Data.Format = SoundIO.Format.Float32LE;
         _ins.Data.SampleRate = 48000;
 
-        _ins.Data.Layout = SIO.ChannelLayoutGetBuiltin(SoundIO.ChannelLayoutID._7Point0);
+        _ins.Data.Layout = _dev.Data.Layouts[0];
         _ins.Data.SoftwareLatency = 0.2;
 
         _ins.Data.OnRead = OnReadInStream;

@@ -180,23 +180,23 @@ namespace SoundIO
                 return true;
             }
 
-            [DllImport("libsoundio.dll", EntryPoint="soundio_destroy")]
+            [DllImport("SoundIO.dll", EntryPoint="soundio_destroy")]
             extern static void Destroy(IntPtr context);
         }
 
-        [DllImport("libsoundio.dll", EntryPoint="soundio_create")]
+        [DllImport("SoundIO.dll", EntryPoint="soundio_create")]
         public extern static Context Create();
 
-        [DllImport("libsoundio.dll", EntryPoint="soundio_connect")]
+        [DllImport("SoundIO.dll", EntryPoint="soundio_connect")]
         public extern static Error Connect(Context context);
 
-        [DllImport("libsoundio.dll", EntryPoint="soundio_connect_backend")]
+        [DllImport("SoundIO.dll", EntryPoint="soundio_connect_backend")]
         public extern static Error Connect(Context context, Backend backend);
 
-        [DllImport("libsoundio.dll", EntryPoint="soundio_disconnect")]
+        [DllImport("SoundIO.dll", EntryPoint="soundio_disconnect")]
         public extern static void Disconnect(Context context);
 
-        [DllImport("libsoundio.dll", EntryPoint="soundio_flush_events")]
+        [DllImport("SoundIO.dll", EntryPoint="soundio_flush_events")]
         public extern static void FlushEvents(Context context);
 
         #endregion
@@ -220,10 +220,10 @@ namespace SoundIO
             } }
         }
 
-        [DllImport("libsoundio.dll", EntryPoint="soundio_channel_layout_builtin_count")]
+        [DllImport("SoundIO.dll", EntryPoint="soundio_channel_layout_builtin_count")]
         public extern static int ChannelLayoutBuiltinCount();
 
-        [DllImport("libsoundio.dll", EntryPoint="soundio_channel_layout_get_builtin")]
+        [DllImport("SoundIO.dll", EntryPoint="soundio_channel_layout_get_builtin")]
         public extern static ref readonly ChannelLayout
             ChannelLayoutGetBuiltin(ChannelLayoutID id);
 
@@ -288,48 +288,48 @@ namespace SoundIO
             unsafe public ref DeviceData Data =>
                 ref Unsafe.AsRef<DeviceData>((void*)this.handle);
 
-            [DllImport("libsoundio.dll", EntryPoint="soundio_device_unref")]
+            [DllImport("SoundIO.dll", EntryPoint="soundio_device_unref")]
             extern static void Unref(IntPtr device);
         }
 
-        [DllImport("libsoundio.dll", EntryPoint="soundio_output_device_count")]
+        [DllImport("SoundIO.dll", EntryPoint="soundio_output_device_count")]
         public extern static int OutputDeviceCount(Context context);
 
-        [DllImport("libsoundio.dll", EntryPoint="soundio_input_device_count")]
+        [DllImport("SoundIO.dll", EntryPoint="soundio_input_device_count")]
         public extern static int InputDeviceCount(Context context);
 
-        [DllImport("libsoundio.dll", EntryPoint="soundio_get_input_device")]
+        [DllImport("SoundIO.dll", EntryPoint="soundio_get_input_device")]
         public extern static Device GetInputDevice(Context context, int index);
 
-        [DllImport("libsoundio.dll", EntryPoint="soundio_get_output_device")]
+        [DllImport("SoundIO.dll", EntryPoint="soundio_get_output_device")]
         public extern static Device GetOutputDevice(Context context, int index);
 
-        [DllImport("libsoundio.dll", EntryPoint="soundio_default_input_device_index")]
+        [DllImport("SoundIO.dll", EntryPoint="soundio_default_input_device_index")]
         public extern static int DefaultInputDeviceIndex(Context context);
 
-        [DllImport("libsoundio.dll", EntryPoint="soundio_default_output_device_index")]
+        [DllImport("SoundIO.dll", EntryPoint="soundio_default_output_device_index")]
         public extern static int DefaultOutputDeviceIndex(Context context);
 
-        [DllImport("libsoundio.dll", EntryPoint="soundio_device_equal")]
+        [DllImport("SoundIO.dll", EntryPoint="soundio_device_equal")]
         [return: MarshalAs(UnmanagedType.U1)]
         public extern static bool Equal(Device a, Device b);
 
-        [DllImport("libsoundio.dll", EntryPoint="soundio_device_sort_channel_layouts")]
+        [DllImport("SoundIO.dll", EntryPoint="soundio_device_sort_channel_layouts")]
         public extern static void SortChannelLayouts(Device device);
 
-        [DllImport("libsoundio.dll", EntryPoint="soundio_device_supports_format")]
+        [DllImport("SoundIO.dll", EntryPoint="soundio_device_supports_format")]
         [return: MarshalAs(UnmanagedType.U1)]
         public extern static bool SupportsFormat(Device device, Format format);
 
-        [DllImport("libsoundio.dll", EntryPoint="soundio_device_supports_layout")]
+        [DllImport("SoundIO.dll", EntryPoint="soundio_device_supports_layout")]
         [return: MarshalAs(UnmanagedType.U1)]
         public extern static bool SupportsLayout(Device device, in ChannelLayout layout);
 
-        [DllImport("libsoundio.dll", EntryPoint="soundio_device_supports_sample_rate")]
+        [DllImport("SoundIO.dll", EntryPoint="soundio_device_supports_sample_rate")]
         [return: MarshalAs(UnmanagedType.U1)]
         public extern static bool SupportsSampleRate(Device device, int sampleRate);
 
-        [DllImport("libsoundio.dll", EntryPoint="soundio_device_nearest_sample_rate")]
+        [DllImport("SoundIO.dll", EntryPoint="soundio_device_nearest_sample_rate")]
         public extern static int NearestSampleRate(Device device, int sampleRate);
 
         #endregion
@@ -405,31 +405,31 @@ namespace SoundIO
             unsafe public ref InStreamData Data =>
                 ref Unsafe.AsRef<InStreamData>((void*)this.handle);
 
-            [DllImport("libsoundio.dll", EntryPoint="soundio_instream_destroy")]
+            [DllImport("SoundIO.dll", EntryPoint="soundio_instream_destroy")]
             extern static void Destroy(IntPtr stream);
         }
 
-        [DllImport("libsoundio.dll", EntryPoint="soundio_instream_create")]
+        [DllImport("SoundIO.dll", EntryPoint="soundio_instream_create")]
         public extern static InStream InStreamCreate(Device device);
 
-        [DllImport("libsoundio.dll", EntryPoint="soundio_instream_open")]
+        [DllImport("SoundIO.dll", EntryPoint="soundio_instream_open")]
         public extern static Error Open(InStream stream);
 
-        [DllImport("libsoundio.dll", EntryPoint="soundio_instream_start")]
+        [DllImport("SoundIO.dll", EntryPoint="soundio_instream_start")]
         public extern static Error Start(InStream stream);
 
-        [DllImport("libsoundio.dll", EntryPoint="soundio_instream_begin_read")]
+        [DllImport("SoundIO.dll", EntryPoint="soundio_instream_begin_read")]
         unsafe public extern static Error
             BeginRead(ref InStreamData stream, out ChannelArea* areas, ref int frameCount);
 
-        [DllImport("libsoundio.dll", EntryPoint="soundio_instream_end_read")]
+        [DllImport("SoundIO.dll", EntryPoint="soundio_instream_end_read")]
         public extern static Error EndRead(ref InStreamData stream);
 
-        [DllImport("libsoundio.dll", EntryPoint="soundio_instream_pause")]
+        [DllImport("SoundIO.dll", EntryPoint="soundio_instream_pause")]
         public extern static Error
             Pause(InStream stream, [MarshalAs(UnmanagedType.U1)] bool pause);
 
-        [DllImport("libsoundio.dll", EntryPoint="soundio_instream_get_latency")]
+        [DllImport("SoundIO.dll", EntryPoint="soundio_instream_get_latency")]
         public extern static Error GetLatency(InStream stream, out double latency);
 
         #endregion
@@ -446,35 +446,35 @@ namespace SoundIO
                 return true;
             }
 
-            [DllImport("libsoundio.dll", EntryPoint="soundio_ring_buffer_destroy")]
+            [DllImport("SoundIO.dll", EntryPoint="soundio_ring_buffer_destroy")]
             extern static void Destroy(IntPtr buffer);
         }
 
-        [DllImport("libsoundio.dll", EntryPoint="soundio_ring_buffer_create")]
+        [DllImport("SoundIO.dll", EntryPoint="soundio_ring_buffer_create")]
         public extern static RingBuffer RingBufferCreate(Context context, int capacity);
 
-        [DllImport("libsoundio.dll", EntryPoint="soundio_ring_buffer_capacity")]
+        [DllImport("SoundIO.dll", EntryPoint="soundio_ring_buffer_capacity")]
         public extern static int Capacity(RingBuffer buffer);
 
-        [DllImport("libsoundio.dll", EntryPoint="soundio_ring_buffer_write_ptr")]
+        [DllImport("SoundIO.dll", EntryPoint="soundio_ring_buffer_write_ptr")]
         public extern static IntPtr WritePtr(RingBuffer buffer);
 
-        [DllImport("libsoundio.dll", EntryPoint="soundio_ring_buffer_advance_write_ptr")]
+        [DllImport("SoundIO.dll", EntryPoint="soundio_ring_buffer_advance_write_ptr")]
         public extern static void AdvanceWritePtr(RingBuffer buffer, int count);
 
-        [DllImport("libsoundio.dll", EntryPoint="soundio_ring_buffer_read_ptr")]
+        [DllImport("SoundIO.dll", EntryPoint="soundio_ring_buffer_read_ptr")]
         public extern static IntPtr ReadPtr(RingBuffer buffer);
 
-        [DllImport("libsoundio.dll", EntryPoint="soundio_ring_buffer_advance_read_ptr")]
+        [DllImport("SoundIO.dll", EntryPoint="soundio_ring_buffer_advance_read_ptr")]
         public extern static void AdvanceReadPtr(RingBuffer buffer, int count);
 
-        [DllImport("libsoundio.dll", EntryPoint="soundio_ring_buffer_fill_count")]
+        [DllImport("SoundIO.dll", EntryPoint="soundio_ring_buffer_fill_count")]
         public extern static int FillCount(RingBuffer buffer);
 
-        [DllImport("libsoundio.dll", EntryPoint="soundio_ring_buffer_free_count")]
+        [DllImport("SoundIO.dll", EntryPoint="soundio_ring_buffer_free_count")]
         public extern static int FreeCount(RingBuffer buffer);
 
-        [DllImport("libsoundio.dll", EntryPoint="soundio_ring_buffer_clear")]
+        [DllImport("SoundIO.dll", EntryPoint="soundio_ring_buffer_clear")]
         public extern static void Clear(RingBuffer buffer);
 
         #endregion
