@@ -1,4 +1,6 @@
 using UnityEngine;
+using UnityEngine.Rendering;
+using Unity.Collections;
 using InvalidOp = System.InvalidOperationException;
 using SIO = SoundIO.NativeMethods;
 using GCHandle = System.Runtime.InteropServices.GCHandle;
@@ -6,11 +8,16 @@ using System;
 
 public sealed class Test : MonoBehaviour
 {
+    [SerializeField] float _amplitude = 10;
+    [SerializeField] Material _material = null;
+
     GCHandle _self;
     SIO.Context _sio;
     SIO.Device _dev;
     SIO.InStream _ins;
     SIO.RingBuffer _ring;
+
+    Mesh _mesh;
 
     unsafe static void OnReadInStream(ref SIO.InStreamData stream, int frameCountMin, int frameCountMax)
     {
@@ -102,7 +109,7 @@ public sealed class Test : MonoBehaviour
         _ins.Data.SampleRate = 48000;
 
         _ins.Data.Layout = _dev.Data.Layouts[0];
-        _ins.Data.SoftwareLatency = 0.2;
+        _ins.Data.SoftwareLatency = 1.0 / 60;
 
         _ins.Data.OnRead = OnReadInStream;
         _ins.Data.OnOverflow = OnOverflowInStream;
@@ -116,15 +123,28 @@ public sealed class Test : MonoBehaviour
         SIO.Start(_ins);
     }
 
-    void Update()
+    unsafe void Update()
     {
         if (!_sio?.IsInvalid ?? false) SIO.FlushEvents(_sio);
 
         if (!_ring?.IsInvalid ?? false)
         {
-            Debug.Log(SIO.ReadPtr(_ring));
-            SIO.AdvanceReadPtr(_ring, SIO.FillCount(_ring));
+            var fill = SIO.FillCount(_ring);
+
+            if (fill > 0)
+            {
+                var buffer = new ReadOnlySpan<float>(
+                    (void*)SIO.ReadPtr(_ring),
+                    fill / 4
+                );
+
+                UpdateMesh(buffer);
+
+                SIO.AdvanceReadPtr(_ring, fill);
+            }
         }
+
+        Graphics.DrawMesh(_mesh, transform.localToWorldMatrix, _material, gameObject.layer);
     }
 
     void OnDestroy()
@@ -134,5 +154,94 @@ public sealed class Test : MonoBehaviour
         if (!_dev ?.IsInvalid ?? false) _dev.Close();
         if (!_sio ?.IsInvalid ?? false) _sio.Close();
         _self.Free();
+
+        if (_mesh != null) Destroy(_mesh);
     }
+
+    #region Line mesh generator
+
+    const int Resolution = 480;
+    const int Channels = 7;
+
+    void UpdateMesh(ReadOnlySpan<float> input)
+    {
+        if (_mesh == null)
+        {
+            _mesh = new Mesh();
+
+            using (var vertexArray = CreateVertexArray(input))
+            {
+                _mesh.SetVertexBufferParams(
+                    vertexArray.Length,
+                    new VertexAttributeDescriptor
+                        (VertexAttribute.Position, VertexAttributeFormat.Float32, 3)
+                );
+                _mesh.SetVertexBufferData(vertexArray, 0, 0, vertexArray.Length);
+            }
+
+            using (var indexArray = CreateIndexArray())
+            {
+                _mesh.SetIndexBufferParams(indexArray.Length, IndexFormat.UInt32);
+                _mesh.SetIndexBufferData(indexArray, 0, 0, indexArray.Length);
+                _mesh.SetSubMesh(0, new SubMeshDescriptor(0, indexArray.Length, MeshTopology.Lines));
+            }
+        }
+        else
+        {
+            using (var vertexArray = CreateVertexArray(input))
+                _mesh.SetVertexBufferData(vertexArray, 0, 0, vertexArray.Length);
+        }
+    }
+
+    NativeArray<uint> CreateIndexArray()
+    {
+        var buffer = new NativeArray<uint>(
+            (Resolution - 1) * 2 * Channels,
+            Allocator.Temp, NativeArrayOptions.UninitializedMemory
+        );
+
+        var offs = 0;
+        var target = 0u;
+
+        for (var ch = 0; ch < Channels; ch++)
+        {
+            for (var i = 0; i < Resolution - 1; i++)
+            {
+                buffer[offs++] = target;
+                buffer[offs++] = target + 1;
+                target++;
+            }
+            target++;
+        }
+
+        return buffer;
+    }
+
+    NativeArray<Vector3> CreateVertexArray(ReadOnlySpan<float> input)
+    {
+        var buffer = new NativeArray<Vector3>(
+            Resolution * Channels,
+            Allocator.Temp, NativeArrayOptions.UninitializedMemory
+        );
+
+        var offs = 0;
+
+        for (var ch = 0; ch < Channels; ch++)
+        {
+            for (var vi = 0; vi < Resolution; vi++)
+            {
+                var i = vi * Channels + ch;
+                var v = i < input.Length ? input[i] : 0;
+
+                var x = (float)vi / Resolution;
+                var y = ch + v * _amplitude;
+
+                buffer[offs++] = new Vector3(x, y, 0);
+            }
+        }
+
+        return buffer;
+    }
+
+    #endregion
 }
