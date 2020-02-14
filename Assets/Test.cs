@@ -11,6 +11,7 @@ public sealed class Test : MonoBehaviour
     [SerializeField] float _amplitude = 10;
     [SerializeField] Material _material = null;
 
+
     GCHandle _self;
     SIO.Context _sio;
     SIO.Device _dev;
@@ -75,12 +76,15 @@ public sealed class Test : MonoBehaviour
 
     static void OnErrorInStream(ref SIO.InStreamData stream, SIO.Error error)
     {
+        Debug.Log($"InStream error ({error})");
     }
+
+    static SIO.InStreamData.ReadCallback _onReadInStream = OnReadInStream;
+    static SIO.InStreamData.OverflowCallback _onOverflowInStream = OnOverflowInStream;
+    static SIO.InStreamData.ErrorCallback _onErrorInStream = OnErrorInStream;
 
     void Start()
     {
-        ThreadFactory.Initialize();
-
         _self = GCHandle.Alloc(this);
 
         _sio = SIO.Create();
@@ -113,9 +117,9 @@ public sealed class Test : MonoBehaviour
         _ins.Data.Layout = _dev.Data.Layouts[0];
         _ins.Data.SoftwareLatency = 1.0 / 60;
 
-        _ins.Data.OnRead = OnReadInStream;
-        _ins.Data.OnOverflow = OnOverflowInStream;
-        _ins.Data.OnError = OnErrorInStream;
+        _ins.Data.OnRead = _onReadInStream;
+        _ins.Data.OnOverflow = _onOverflowInStream;
+        _ins.Data.OnError = _onErrorInStream;
         _ins.Data.UserData = GCHandle.ToIntPtr(_self);
 
         var err = SIO.Open(_ins);
