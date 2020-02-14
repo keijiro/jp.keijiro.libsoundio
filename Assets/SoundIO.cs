@@ -354,13 +354,8 @@ namespace SoundIO
             public int BytesPerSample;
             Error _layoutError;
 
-            [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
             public delegate void ReadCallback(ref InStreamData stream, int frameCountMin, int frameCountMax);
-
-            [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
             public delegate void OverflowCallback(ref InStreamData stream);
-
-            [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
             public delegate void ErrorCallback(ref InStreamData stream, Error error);
 
             public ReadCallback OnRead
@@ -476,6 +471,38 @@ namespace SoundIO
 
         [DllImport("SoundIO.dll", EntryPoint="soundio_ring_buffer_clear")]
         public extern static void Clear(RingBuffer buffer);
+
+        #endregion
+
+        #region Thread factory replacement
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct ThreadFactoryData
+        {
+            IntPtr _createThread;
+            IntPtr _destroyThread;
+
+            public delegate IntPtr CreateThreadDelegate(IntPtr userData);
+            public delegate void DestroyThreadDelegate(IntPtr thread);
+
+            public CreateThreadDelegate CreateThread
+            {
+                get => Marshal.GetDelegateForFunctionPointer<CreateThreadDelegate>(_createThread);
+                set => _createThread = Marshal.GetFunctionPointerForDelegate(value);
+            }
+
+            public DestroyThreadDelegate DestroyThread
+            {
+                get => Marshal.GetDelegateForFunctionPointer<DestroyThreadDelegate>(_destroyThread);
+                set => _destroyThread = Marshal.GetFunctionPointerForDelegate(value);
+            }
+        }
+
+        [DllImport("SoundIO.dll", EntryPoint="soundio_set_thread_factory")]
+        public extern static void SetThreadFactory(in ThreadFactoryData factory);
+
+        [DllImport("SoundIO.dll", EntryPoint="soundio_run_thread")]
+        public extern static void RunThread(IntPtr userData);
 
         #endregion
     }

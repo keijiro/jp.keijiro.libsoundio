@@ -79,6 +79,8 @@ public sealed class Test : MonoBehaviour
 
     void Start()
     {
+        ThreadFactory.Initialize();
+
         _self = GCHandle.Alloc(this);
 
         _sio = SIO.Create();
