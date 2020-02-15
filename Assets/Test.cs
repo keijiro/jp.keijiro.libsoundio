@@ -88,7 +88,7 @@ public sealed class Test : MonoBehaviour
             _dev.Close();
         }
 
-        if (_dev == null)
+        if (_dev.IsClosed)
             _dev = SIO.GetInputDevice(_sio, SIO.DefaultInputDeviceIndex(_sio));
 
         if (_dev?.IsInvalid ?? true)
