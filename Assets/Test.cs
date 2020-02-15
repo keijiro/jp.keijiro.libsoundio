@@ -1,40 +1,36 @@
+using System;
+using Unity.Collections;
 using UnityEngine;
 using UnityEngine.Rendering;
-using Unity.Collections;
-using InvalidOp = System.InvalidOperationException;
-using SIO = SoundIO.NativeMethods;
 using GCHandle = System.Runtime.InteropServices.GCHandle;
-using System;
+using InvalidOp = System.InvalidOperationException;
+using MemoryMarshal = System.Runtime.InteropServices.MemoryMarshal;
+using SIO = SoundIO.NativeMethods;
 
 public sealed class Test : MonoBehaviour
 {
+    [SerializeField] string _deviceName = "";
     [SerializeField] float _amplitude = 10;
     [SerializeField] Material _material = null;
 
-
     GCHandle _self;
+
     SIO.Context _sio;
     SIO.Device _dev;
     SIO.InStream _ins;
-    SIO.RingBuffer _ring;
 
+    FifoBuffer _fifo = new FifoBuffer(64 * 1024);
     Mesh _mesh;
 
-    unsafe static void OnReadInStream(ref SIO.InStreamData stream, int frameCountMin, int frameCountMax)
+    unsafe static void OnReadInStream
+        (ref SIO.InStreamData stream, int frameMin, int frameMax)
     {
         var self = (Test)GCHandle.FromIntPtr(stream.UserData).Target;
-
-        var writePtr = SIO.WritePtr(self._ring);
-        var freeBytes = SIO.FreeCount(self._ring);
-        var freeCount = freeBytes / stream.BytesPerFrame;
-
-        var writeFrames = Mathf.Min(freeCount, frameCountMax);
-        var framesLeft = writeFrames;
         var layout = stream.Layout;
 
-        while (framesLeft > 0)
+        for (var left = frameMax; left > 0;)
         {
-            var frameCount = framesLeft;
+            var frameCount = left;
 
             SIO.ChannelArea* areas;
             SIO.BeginRead(ref stream, out areas, ref frameCount);
@@ -43,31 +39,21 @@ public sealed class Test : MonoBehaviour
 
             if (areas == null)
             {
-                new Span<Byte>((void*)writePtr, frameCount * stream.BytesPerFrame).Fill(0);
+                self._fifo.PushEmpty(frameCount * stream.BytesPerFrame);
             }
             else
             {
-                for (var frame = 0; frame < frameCount; frame++)
-                {
-                    for (var ch = 0; ch < layout.ChannelCount; ch++)
-                    {
-                        var len = stream.BytesPerSample;
-                        var from = new Span<Byte>((void*)areas[ch].Pointer, len);
-                        var to = new Span<Byte>((void*)writePtr, len);
-                        from.CopyTo(to);
-                        areas[ch].Pointer += areas[ch].Step;
-                        writePtr += len;
-                    }
-                }
+                var span = new ReadOnlySpan<Byte>(
+                    (void*)areas[0].Pointer,
+                    areas[0].Step * frameCount
+                );
+                self._fifo.Push(span);
             }
 
             SIO.EndRead(ref stream);
 
-            framesLeft -= frameCount;
+            left -= frameCount;
         }
-
-        var advanceBytes = writeFrames * stream.BytesPerFrame;
-        SIO.AdvanceWritePtr(self._ring, advanceBytes);
     }
 
     static void OnOverflowInStream(ref SIO.InStreamData stream)
@@ -95,16 +81,23 @@ public sealed class Test : MonoBehaviour
         SIO.Connect(_sio);
         SIO.FlushEvents(_sio);
 
-        _dev = SIO.GetInputDevice(_sio, SIO.DefaultInputDeviceIndex(_sio));
+        for (var i = 0; i < SIO.InputDeviceCount(_sio); i++)
+        {
+            _dev = SIO.GetInputDevice(_sio, i);
+            if (_dev.Data.Name == _deviceName) break;
+            _dev.Close();
+        }
+
+        if (_dev == null)
+            _dev = SIO.GetInputDevice(_sio, SIO.DefaultInputDeviceIndex(_sio));
 
         if (_dev?.IsInvalid ?? true)
             throw new InvalidOp("Can't open the default input device.");
+
         if (_dev.Data.ProbeError != SIO.Error.None)
             throw new InvalidOp("Unable to probe device ({_dev.Data.ProbeError})");
 
         SIO.SortChannelLayouts(_dev);
-
-        _ring = SIO.RingBufferCreate(_sio, 1024 * 1024);
 
         _ins = SIO.InStreamCreate(_dev);
 
@@ -112,11 +105,7 @@ public sealed class Test : MonoBehaviour
             throw new InvalidOp("Can't create an input stream.");
 
         _ins.Data.Format = SoundIO.Format.Float32LE;
-        _ins.Data.SampleRate = 48000;
-
-        _ins.Data.Layout = _dev.Data.Layouts[0];
         _ins.Data.SoftwareLatency = 1.0 / 60;
-
         _ins.Data.OnRead = _onReadInStream;
         _ins.Data.OnOverflow = _onOverflowInStream;
         _ins.Data.OnError = _onErrorInStream;
@@ -132,31 +121,13 @@ public sealed class Test : MonoBehaviour
     unsafe void Update()
     {
         if (!_sio?.IsInvalid ?? false) SIO.FlushEvents(_sio);
-
-        if (!_ring?.IsInvalid ?? false)
-        {
-            var fill = SIO.FillCount(_ring);
-
-            if (fill > 0)
-            {
-                var buffer = new ReadOnlySpan<float>(
-                    (void*)SIO.ReadPtr(_ring),
-                    fill / 4
-                );
-
-                UpdateMesh(buffer);
-
-                SIO.AdvanceReadPtr(_ring, fill);
-            }
-        }
-
+        UpdateMesh(MemoryMarshal.Cast<byte, float>(_fifo.ReadSpan));
         Graphics.DrawMesh(_mesh, transform.localToWorldMatrix, _material, gameObject.layer);
     }
 
     void OnDestroy()
     {
         if (!_ins ?.IsInvalid ?? false) _ins.Close();
-        if (!_ring?.IsInvalid ?? false) _ring.Close();
         if (!_dev ?.IsInvalid ?? false) _dev.Close();
         if (!_sio ?.IsInvalid ?? false) _sio.Close();
         _self.Free();

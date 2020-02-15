@@ -224,6 +224,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 10088a742a67f544f84ed267b5304670, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _deviceName: 'Azure Kinect Microphone Array, USB Audio: Hardware device with all
+    software conversions'
+  _amplitude: 10
   _material: {fileID: 2100000, guid: 7baa6452cd667084e86b064a40321d3b, type: 2}
 --- !u!4 &1695685555
 Transform:
