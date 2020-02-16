@@ -19,7 +19,8 @@ public sealed class Test : MonoBehaviour
     SIO.Device _dev;
     SIO.InStream _ins;
 
-    FifoBuffer _fifo = new FifoBuffer(64 * 1024);
+    RingBuffer _ring = new RingBuffer(128 * 1024);
+    byte[] _temp = new byte[Resolution * Channels * 4];
     Mesh _mesh;
 
     unsafe static void OnReadInStream
@@ -39,7 +40,8 @@ public sealed class Test : MonoBehaviour
 
             if (areas == null)
             {
-                self._fifo.PushEmpty(frameCount * stream.BytesPerFrame);
+                lock (self._ring)
+                    self._ring.WriteEmpty(frameCount * stream.BytesPerFrame);
             }
             else
             {
@@ -47,7 +49,7 @@ public sealed class Test : MonoBehaviour
                     (void*)areas[0].Pointer,
                     areas[0].Step * frameCount
                 );
-                self._fifo.Push(span);
+                lock (self._ring) self._ring.Write(span);
             }
 
             SIO.EndRead(ref stream);
@@ -121,7 +123,12 @@ public sealed class Test : MonoBehaviour
     unsafe void Update()
     {
         if (!_sio?.IsInvalid ?? false) SIO.FlushEvents(_sio);
-        UpdateMesh(MemoryMarshal.Cast<byte, float>(_fifo.ReadSpan));
+
+        lock (_ring)
+            while (_ring.FillCount > _temp.Length) _ring.Read(_temp);
+
+        UpdateMesh(MemoryMarshal.Cast<byte, float>(_temp));
+
         Graphics.DrawMesh(_mesh, transform.localToWorldMatrix, _material, gameObject.layer);
     }
 
