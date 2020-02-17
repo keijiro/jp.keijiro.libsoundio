@@ -1,0 +1,12 @@
+{
+    "author": "Keijiro Takahashi",
+    "description": "libsoundio for Unity",
+    "displayName": "libsoundio",
+    "keywords": [ "unity" ],
+    "license": "MIT",
+    "name": "jp.keijiro.libsoundio",
+    "repository": "github:keijiro/jp.keijiro.libsoundio",
+    "unity": "2019.3",
+    "unityRelease": "1f1",
+    "version": "1.0.0"
+}

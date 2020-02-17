@@ -1,0 +1,18 @@
+{
+    "name": "SoundIO.Runtime",
+    "references": [],
+    "includePlatforms": [
+        "Editor",
+        "Lumin",
+        "macOSStandalone",
+        "WindowsStandalone64"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
