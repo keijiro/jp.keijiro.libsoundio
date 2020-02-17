@@ -205,6 +205,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1695685555}
   - component: {fileID: 1695685554}
+  - component: {fileID: 1695685556}
   m_Layer: 0
   m_Name: Test
   m_TagString: Untagged
@@ -226,8 +227,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _deviceName: 'Azure Kinect Microphone Array, USB Audio: Hardware device with all
     software conversions'
-  _amplitude: 10
-  _material: {fileID: 2100000, guid: 7baa6452cd667084e86b064a40321d3b, type: 2}
 --- !u!4 &1695685555
 Transform:
   m_ObjectHideFlags: 0
@@ -242,3 +241,18 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1695685556
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1695685553}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2711405b083e76e4bad6382e033c30a6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _resolution: 512
+  _amplitude: 10
+  _material: {fileID: 2100000, guid: 7baa6452cd667084e86b064a40321d3b, type: 2}
