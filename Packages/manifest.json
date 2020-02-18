@@ -8,7 +8,5 @@
       ]
     }
   ],
-  "dependencies": {
-    "org.nuget.system.memory": "4.5.3"
-  }
+  "dependencies": {}
 }

@@ -2,7 +2,6 @@ using System;
 using UnityEngine;
 using GCHandle = System.Runtime.InteropServices.GCHandle;
 using MemoryMarshal = System.Runtime.InteropServices.MemoryMarshal;
-using SIO = SoundIO.NativeMethods;
 
 public sealed class Test : MonoBehaviour
 {
@@ -16,9 +15,9 @@ public sealed class Test : MonoBehaviour
 
     GCHandle _self;
 
-    SIO.Context _sio;
-    SIO.Device _dev;
-    SIO.InStream _ins;
+    SoundIO.Context _sio;
+    SoundIO.Device _dev;
+    SoundIO.InStream _ins;
 
     RingBuffer _ring = new RingBuffer(128 * 1024);
     byte[] _tempBuffer;
@@ -31,7 +30,7 @@ public sealed class Test : MonoBehaviour
     {
         _self = GCHandle.Alloc(this);
 
-        _sio = SIO.Create();
+        _sio = SoundIO.Context.Create();
 
         if (_sio?.IsInvalid ?? true)
         {
@@ -39,18 +38,18 @@ public sealed class Test : MonoBehaviour
             return;
         }
 
-        SIO.Connect(_sio);
-        SIO.FlushEvents(_sio);
+        _sio.Connect();
+        _sio.FlushEvents();
 
-        for (var i = 0; i < SIO.InputDeviceCount(_sio); i++)
+        for (var i = 0; i < _sio.InputDeviceCount; i++)
         {
-            _dev = SIO.GetInputDevice(_sio, i);
-            if (_dev.Data.Name == _deviceName) break;
+            _dev = _sio.GetInputDevice(i);
+            if (_dev.Name == _deviceName) break;
             _dev.Close();
         }
 
         if (_dev.IsClosed)
-            _dev = SIO.GetInputDevice(_sio, SIO.DefaultInputDeviceIndex(_sio));
+            _dev = _sio.GetInputDevice(_sio.DefaultInputDeviceIndex);
 
         if (_dev?.IsInvalid ?? true)
         {
@@ -58,15 +57,15 @@ public sealed class Test : MonoBehaviour
             return;
         }
 
-        if (_dev.Data.ProbeError != SIO.Error.None)
+        if (_dev.ProbeError != SoundIO.Error.None)
         {
-            Debug.LogError("Unable to probe device ({_dev.Data.ProbeError})");
+            Debug.LogError("Unable to probe device ({_dev.ProbeError})");
             return;
         }
 
-        SIO.SortChannelLayouts(_dev);
+        _dev.SortChannelLayouts();
 
-        _ins = SIO.InStreamCreate(_dev);
+        _ins = SoundIO.InStream.Create(_dev);
 
         if (_ins?.IsInvalid ?? true)
         {
@@ -74,27 +73,27 @@ public sealed class Test : MonoBehaviour
             return;
         }
 
-        _ins.Data.Format = SoundIO.Format.Float32LE;
-        _ins.Data.SoftwareLatency = 1.0 / 60;
-        _ins.Data.OnRead = _onReadInStream;
-        _ins.Data.OnOverflow = _onOverflowInStream;
-        _ins.Data.OnError = _onErrorInStream;
-        _ins.Data.UserData = GCHandle.ToIntPtr(_self);
+        _ins.Format = SoundIO.Format.Float32LE;
+        _ins.SoftwareLatency = 1.0 / 60;
+        _ins.ReadCallback = _readCallback;
+        _ins.OverflowCallback = _overflowCallback;
+        _ins.ErrorCallback = _errorCallback;
+        _ins.UserData = GCHandle.ToIntPtr(_self);
 
-        var err = SIO.Open(_ins);
+        var err = _ins.Open();
 
-        if (err != SIO.Error.None)
+        if (err != SoundIO.Error.None)
         {
             Debug.LogError($"Can't open an input stream ({err})");
             return;
         }
 
-        SIO.Start(_ins);
+        _ins.Start();
     }
 
     void Update()
     {
-        if (!_sio?.IsInvalid ?? false) SIO.FlushEvents(_sio);
+        if (!_sio?.IsInvalid ?? false) _sio.FlushEvents();
 
         var wr = GetComponent<WaveformRenderer>();
         if (wr == null) return;
@@ -122,12 +121,12 @@ public sealed class Test : MonoBehaviour
 
     #region SoundIO callback methods
 
-    static SIO.InStreamData.ReadCallback _onReadInStream = OnReadInStream;
-    static SIO.InStreamData.OverflowCallback _onOverflowInStream = OnOverflowInStream;
-    static SIO.InStreamData.ErrorCallback _onErrorInStream = OnErrorInStream;
+    static SoundIO.InStream.ReadCallbackDelegate _readCallback = OnReadInStream;
+    static SoundIO.InStream.OverflowCallbackDelegate _overflowCallback = OnOverflowInStream;
+    static SoundIO.InStream.ErrorCallbackDelegate _errorCallback = OnErrorInStream;
 
     unsafe static void
-        OnReadInStream(ref SIO.InStreamData stream, int frameMin, int frameMax)
+        OnReadInStream(ref SoundIO.InStreamData stream, int frameMin, int frameMax)
     {
         var self = (Test)GCHandle.FromIntPtr(stream.UserData).Target;
         var layout = stream.Layout;
@@ -136,8 +135,8 @@ public sealed class Test : MonoBehaviour
         {
             var frameCount = left;
 
-            SIO.ChannelArea* areas;
-            SIO.BeginRead(ref stream, out areas, ref frameCount);
+            SoundIO.ChannelArea* areas;
+            stream.BeginRead(out areas, ref frameCount);
 
             if (frameCount == 0) break;
 
@@ -155,18 +154,18 @@ public sealed class Test : MonoBehaviour
                 lock (self._ring) self._ring.Write(span);
             }
 
-            SIO.EndRead(ref stream);
+            stream.EndRead();
 
             left -= frameCount;
         }
     }
 
-    static void OnOverflowInStream(ref SIO.InStreamData stream)
+    static void OnOverflowInStream(ref SoundIO.InStreamData stream)
     {
         Debug.LogWarning("InStream overflow");
     }
 
-    static void OnErrorInStream(ref SIO.InStreamData stream, SIO.Error error)
+    static void OnErrorInStream(ref SoundIO.InStreamData stream, SoundIO.Error error)
     {
         Debug.LogError($"InStream error ({error})");
     }

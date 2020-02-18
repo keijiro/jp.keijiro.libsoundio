@@ -1,5 +1,6 @@
 {
     "author": "Keijiro Takahashi",
+    "dependencies": { "org.nuget.system.memory": "4.5.3" },
     "description": "libsoundio for Unity",
     "displayName": "libsoundio",
     "keywords": [ "unity" ],
