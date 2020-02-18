@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.UI;
 using GCHandle = System.Runtime.InteropServices.GCHandle;
 using MemoryMarshal = System.Runtime.InteropServices.MemoryMarshal;
 
@@ -7,7 +8,8 @@ public sealed class Test : MonoBehaviour
 {
     #region Editable attributes
 
-    [SerializeField] string _deviceName = "";
+    [SerializeField] Dropdown _deviceList = null;
+    [SerializeField] Dropdown _channelList = null;
 
     #endregion
 
@@ -24,36 +26,29 @@ public sealed class Test : MonoBehaviour
 
     #endregion
 
-    #region MonoBehaviour implementation
+    #region UI Callback
 
-    void Start()
+    public void OnDeviceSelected(int index)
     {
-        _self = GCHandle.Alloc(this);
+        // Close the current stream and device.
+        if (!_ins ?.IsInvalid ?? false) _ins.Close();
+        if (!_dev ?.IsInvalid ?? false) _dev.Close();
 
-        _sio = SoundIO.Context.Create();
+        // New device name
+        var name = _deviceList.options[index].text;
 
-        if (_sio?.IsInvalid ?? true)
-        {
-            Debug.LogError("Can't create soundio context.");
-            return;
-        }
-
-        _sio.Connect();
-        _sio.FlushEvents();
-
+        // Find the target device.
         for (var i = 0; i < _sio.InputDeviceCount; i++)
         {
             _dev = _sio.GetInputDevice(i);
-            if (_dev.Name == _deviceName) break;
+            if (_dev.IsRaw) continue;
+            if (string.Equals(_dev.Name, name)) break;
             _dev.Close();
         }
 
-        if (_dev.IsClosed)
-            _dev = _sio.GetInputDevice(_sio.DefaultInputDeviceIndex);
-
-        if (_dev?.IsInvalid ?? true)
+        if (_dev == null || _dev.IsClosed || _dev.IsInvalid)
         {
-            Debug.LogError("Can't open the default input device.");
+            Debug.LogError("Failed to open an input device.");
             return;
         }
 
@@ -65,6 +60,15 @@ public sealed class Test : MonoBehaviour
 
         _dev.SortChannelLayouts();
 
+        // Build the channel list.
+        _channelList.ClearOptions();
+
+        for (var i = 0; i < _dev.CurrentLayout.ChannelCount; i++)
+            _channelList.options.Add(new Dropdown.OptionData() { text = $"Channel {i + 1}" });
+
+        _channelList.RefreshShownValue();
+
+        // Create an input stream.
         _ins = SoundIO.InStream.Create(_dev);
 
         if (_ins?.IsInvalid ?? true)
@@ -91,6 +95,42 @@ public sealed class Test : MonoBehaviour
         _ins.Start();
     }
 
+    #endregion
+
+    #region MonoBehaviour implementation
+
+    void Start()
+    {
+        _self = GCHandle.Alloc(this);
+
+        _sio = SoundIO.Context.Create();
+
+        if (_sio?.IsInvalid ?? true)
+        {
+            Debug.LogError("Can't create soundio context.");
+            return;
+        }
+
+        _sio.Connect();
+        _sio.FlushEvents();
+
+        _deviceList.ClearOptions();
+
+        for (var i = 0; i < _sio.InputDeviceCount; i++)
+        {
+            _dev = _sio.GetInputDevice(i);
+            if (_dev.IsRaw) continue;
+            _deviceList.options.Add(new Dropdown.OptionData() { text = _dev.Name });
+            _dev.Close();
+        }
+
+        if (_sio.InputDeviceCount > 0)
+        {
+            OnDeviceSelected(0);
+            _deviceList.RefreshShownValue();
+        }
+    }
+
     void Update()
     {
         if (!_sio?.IsInvalid ?? false) _sio.FlushEvents();
@@ -98,7 +138,8 @@ public sealed class Test : MonoBehaviour
         var wr = GetComponent<WaveformRenderer>();
         if (wr == null) return;
 
-        var dataSize = wr.BufferSize * sizeof(float);
+        var channels = _dev.CurrentLayout.ChannelCount;
+        var dataSize = wr.BufferSize * channels * sizeof(float);
 
         if (_tempBuffer == null || _tempBuffer.Length != dataSize)
             _tempBuffer = new byte[dataSize];
@@ -106,7 +147,10 @@ public sealed class Test : MonoBehaviour
         lock (_ring)
             while (_ring.FillCount > dataSize) _ring.Read(_tempBuffer);
 
-        wr.UpdateMesh(MemoryMarshal.Cast<byte, float>(_tempBuffer));
+        wr.UpdateMesh(
+            MemoryMarshal.Cast<byte, float>(_tempBuffer),
+            channels, _channelList.value
+        );
     }
 
     void OnDestroy()
@@ -171,5 +215,4 @@ public sealed class Test : MonoBehaviour
     }
 
     #endregion
-
 }

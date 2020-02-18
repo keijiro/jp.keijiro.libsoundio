@@ -18,7 +18,17 @@ public sealed class RingBuffer
 
     public void Write(ReadOnlySpan<byte> data)
     {
-        UnityEngine.Debug.Assert(data.Length <= FreeCount);
+        if (FreeCount == 0)
+        {
+            UnityEngine.Debug.LogWarning("RingBuffer overflow");
+            return;
+        }
+
+        if (data.Length > FreeCount)
+        {
+            UnityEngine.Debug.LogWarning("RingBuffer overflow");
+            data = data.Slice(data.Length - FreeCount);
+        }
 
         var rp = ReadOffset;
         var wp = WriteOffset;

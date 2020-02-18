@@ -5,12 +5,6 @@ using UnityEngine.Rendering;
 
 public sealed class WaveformRenderer : MonoBehaviour
 {
-    #region Constants
-
-    const int ChannelCount = 7;
-
-    #endregion
-
     #region Editable attributes
 
     [SerializeField, Range(16, 1024)] int _resolution = 512;
@@ -27,17 +21,17 @@ public sealed class WaveformRenderer : MonoBehaviour
 
     #region Public property and method
 
-    public int BufferSize => _resolution * ChannelCount;
+    public int BufferSize => _resolution;
 
-    public void UpdateMesh(ReadOnlySpan<float> input)
+    public void UpdateMesh(ReadOnlySpan<float> input, int stride, int offset)
     {
-        Debug.Assert(input.Length == BufferSize);
+        Debug.Assert(input.Length == BufferSize * stride);
 
         if (_mesh == null)
         {
             _mesh = new Mesh();
 
-            using (var vertexArray = CreateVertexArray(input))
+            using (var vertexArray = CreateVertexArray(input, stride, offset))
             {
                 _mesh.SetVertexBufferParams(
                     vertexArray.Length,
@@ -56,7 +50,7 @@ public sealed class WaveformRenderer : MonoBehaviour
         }
         else
         {
-            using (var vertexArray = CreateVertexArray(input))
+            using (var vertexArray = CreateVertexArray(input, stride, offset))
                 _mesh.SetVertexBufferData(vertexArray, 0, 0, vertexArray.Length);
         }
     }
@@ -83,48 +77,42 @@ public sealed class WaveformRenderer : MonoBehaviour
     NativeArray<uint> CreateIndexArray()
     {
         var buffer = new NativeArray<uint>(
-            (_resolution - 1) * 2 * ChannelCount,
+            (_resolution - 1) * 2,
             Allocator.Temp, NativeArrayOptions.UninitializedMemory
         );
 
         var offs = 0;
         var target = 0u;
 
-        for (var ch = 0; ch < ChannelCount; ch++)
+        for (var i = 0; i < _resolution - 1; i++)
         {
-            for (var i = 0; i < _resolution - 1; i++)
-            {
-                buffer[offs++] = target;
-                buffer[offs++] = target + 1;
-                target++;
-            }
+            buffer[offs++] = target;
+            buffer[offs++] = target + 1;
             target++;
         }
+        target++;
 
         return buffer;
     }
 
-    NativeArray<Vector3> CreateVertexArray(ReadOnlySpan<float> input)
+    NativeArray<Vector3> CreateVertexArray(ReadOnlySpan<float> input, int stride, int offset)
     {
         var buffer = new NativeArray<Vector3>(
-            _resolution * ChannelCount,
+            _resolution,
             Allocator.Temp, NativeArrayOptions.UninitializedMemory
         );
 
         var offs = 0;
 
-        for (var ch = 0; ch < ChannelCount; ch++)
+        for (var vi = 0; vi < _resolution; vi++)
         {
-            for (var vi = 0; vi < _resolution; vi++)
-            {
-                var i = vi * ChannelCount + ch;
-                var v = i < input.Length ? input[i] : 0;
+            var i = vi * stride + offset;
+            var v = i < input.Length ? input[i] : 0;
 
-                var x = (float)vi / _resolution;
-                var y = ch + v * _amplitude;
+            var x = (float)vi / _resolution;
+            var y = v * _amplitude;
 
-                buffer[offs++] = new Vector3(x, y, 0);
-            }
+            buffer[offs++] = new Vector3(x, y, 0);
         }
 
         return buffer;
