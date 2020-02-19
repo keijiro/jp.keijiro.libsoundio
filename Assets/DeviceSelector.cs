@@ -4,12 +4,13 @@ using UnityEngine.UI;
 using GCHandle = System.Runtime.InteropServices.GCHandle;
 using MemoryMarshal = System.Runtime.InteropServices.MemoryMarshal;
 
-public sealed class Test : MonoBehaviour
+public sealed class DeviceSelector : MonoBehaviour
 {
     #region Editable attributes
 
     [SerializeField] Dropdown _deviceList = null;
     [SerializeField] Dropdown _channelList = null;
+    [SerializeField] WaveformRenderer _renderer = null;
 
     #endregion
 
@@ -143,11 +144,8 @@ public sealed class Test : MonoBehaviour
     {
         if (!_sio?.IsInvalid ?? false) _sio.FlushEvents();
 
-        var wr = GetComponent<WaveformRenderer>();
-        if (wr == null) return;
-
         var channels = _dev.CurrentLayout.ChannelCount;
-        var dataSize = wr.BufferSize * channels * sizeof(float);
+        var dataSize = _renderer.BufferSize * channels * sizeof(float);
 
         if (_tempBuffer == null || _tempBuffer.Length != dataSize)
             _tempBuffer = new byte[dataSize];
@@ -155,7 +153,7 @@ public sealed class Test : MonoBehaviour
         lock (_ring)
             while (_ring.FillCount > dataSize) _ring.Read(_tempBuffer);
 
-        wr.UpdateMesh(
+        _renderer.UpdateMesh(
             MemoryMarshal.Cast<byte, float>(_tempBuffer),
             channels, _channelList.value
         );
@@ -180,7 +178,7 @@ public sealed class Test : MonoBehaviour
     unsafe static void
         OnReadInStream(ref SoundIO.InStreamData stream, int frameMin, int frameMax)
     {
-        var self = (Test)GCHandle.FromIntPtr(stream.UserData).Target;
+        var self = (DeviceSelector)GCHandle.FromIntPtr(stream.UserData).Target;
         var layout = stream.Layout;
 
         for (var left = frameMax; left > 0;)
