@@ -24,6 +24,14 @@ public sealed class Test : MonoBehaviour
     RingBuffer _ring = new RingBuffer(128 * 1024);
     byte[] _tempBuffer;
 
+    bool CheckDevice(SoundIO.Device device)
+    {
+        return
+            !device.IsRaw &&
+            device.CurrentLayout.ChannelCount > 0 && // For ALSA
+            !device.Name.Contains("snooping");       // For ALSA
+    }
+
     #endregion
 
     #region UI Callback
@@ -41,7 +49,7 @@ public sealed class Test : MonoBehaviour
         for (var i = 0; i < _sio.InputDeviceCount; i++)
         {
             _dev = _sio.GetInputDevice(i);
-            if (_dev.IsRaw || _dev.CurrentLayout.ChannelCount == 0) continue;
+            if (!CheckDevice(_dev)) continue;
             if (string.Equals(_dev.Name, name)) break;
             _dev.Close();
         }
@@ -119,7 +127,7 @@ public sealed class Test : MonoBehaviour
         for (var i = 0; i < _sio.InputDeviceCount; i++)
         {
             _dev = _sio.GetInputDevice(i);
-            if (_dev.IsRaw || _dev.CurrentLayout.ChannelCount == 0) continue;
+            if (!CheckDevice(_dev)) continue;
             _deviceList.options.Add(new Dropdown.OptionData() { text = _dev.Name });
             _dev.Close();
         }
