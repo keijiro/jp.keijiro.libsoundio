@@ -3,8 +3,7 @@
     "references": [],
     "includePlatforms": [
         "Editor",
-        "Lumin",
-        "macOSStandalone",
+        "LinuxStandalone64",
         "WindowsStandalone64"
     ],
     "excludePlatforms": [],

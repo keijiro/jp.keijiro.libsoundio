@@ -56,11 +56,11 @@ namespace SoundIO
             return _EndRead(ref this);
         }
 
-        [DllImport("SoundIO.dll", EntryPoint="soundio_instream_begin_read")]
+        [DllImport(Config.DllName, EntryPoint="soundio_instream_begin_read")]
         unsafe extern static Error
             _BeginRead(ref InStreamData stream, out ChannelArea* areas, ref int frameCount);
 
-        [DllImport("SoundIO.dll", EntryPoint="soundio_instream_end_read")]
+        [DllImport(Config.DllName, EntryPoint="soundio_instream_end_read")]
         extern static Error _EndRead(ref InStreamData stream);
 
         #endregion
@@ -169,22 +169,22 @@ namespace SoundIO
 
         #region Native methods
 
-        [DllImport("SoundIO.dll", EntryPoint="soundio_instream_destroy")]
+        [DllImport(Config.DllName, EntryPoint="soundio_instream_destroy")]
         extern static void _Destroy(IntPtr stream);
 
-        [DllImport("SoundIO.dll", EntryPoint="soundio_instream_create")]
+        [DllImport(Config.DllName, EntryPoint="soundio_instream_create")]
         extern static InStream _Create(Device device);
 
-        [DllImport("SoundIO.dll", EntryPoint="soundio_instream_open")]
+        [DllImport(Config.DllName, EntryPoint="soundio_instream_open")]
         extern static Error _Open(InStream stream);
 
-        [DllImport("SoundIO.dll", EntryPoint="soundio_instream_start")]
+        [DllImport(Config.DllName, EntryPoint="soundio_instream_start")]
         extern static Error _Start(InStream stream);
 
-        [DllImport("SoundIO.dll", EntryPoint="soundio_instream_pause")]
+        [DllImport(Config.DllName, EntryPoint="soundio_instream_pause")]
         extern static Error _Pause(InStream stream, byte pause);
 
-        [DllImport("SoundIO.dll", EntryPoint="soundio_instream_get_latency")]
+        [DllImport(Config.DllName, EntryPoint="soundio_instream_get_latency")]
         extern static Error _GetLatency(InStream stream, out double latency);
 
         #endregion

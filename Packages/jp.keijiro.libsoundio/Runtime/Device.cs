@@ -100,25 +100,25 @@ namespace SoundIO
 
         #region Native methods
 
-        [DllImport("SoundIO.dll", EntryPoint="soundio_device_unref")]
+        [DllImport(Config.DllName, EntryPoint="soundio_device_unref")]
         extern static void _Unref(IntPtr device);
 
-        [DllImport("SoundIO.dll", EntryPoint="soundio_device_equal")]
+        [DllImport(Config.DllName, EntryPoint="soundio_device_equal")]
         extern static byte _Equal(Device a, Device b);
 
-        [DllImport("SoundIO.dll", EntryPoint="soundio_device_sort_channel_layouts")]
+        [DllImport(Config.DllName, EntryPoint="soundio_device_sort_channel_layouts")]
         extern static void _SortChannelLayouts(Device device);
 
-        [DllImport("SoundIO.dll", EntryPoint="soundio_device_supports_format")]
+        [DllImport(Config.DllName, EntryPoint="soundio_device_supports_format")]
         extern static byte _SupportsFormat(Device device, Format format);
 
-        [DllImport("SoundIO.dll", EntryPoint="soundio_device_supports_layout")]
+        [DllImport(Config.DllName, EntryPoint="soundio_device_supports_layout")]
         extern static byte _SupportsLayout(Device device, in ChannelLayout layout);
 
-        [DllImport("SoundIO.dll", EntryPoint="soundio_device_supports_sample_rate")]
+        [DllImport(Config.DllName, EntryPoint="soundio_device_supports_sample_rate")]
         extern static byte _SupportsSampleRate(Device device, int sampleRate);
 
-        [DllImport("SoundIO.dll", EntryPoint="soundio_device_nearest_sample_rate")]
+        [DllImport(Config.DllName, EntryPoint="soundio_device_nearest_sample_rate")]
         extern static int _NearestSampleRate(Device device, int sampleRate);
 
         #endregion

@@ -1,8 +1,7 @@
 using System;
 using UnityEngine;
 using UnityEngine.UI;
-using GCHandle = System.Runtime.InteropServices.GCHandle;
-using MemoryMarshal = System.Runtime.InteropServices.MemoryMarshal;
+using System.Runtime.InteropServices;
 
 public sealed class DeviceSelector : MonoBehaviour
 {

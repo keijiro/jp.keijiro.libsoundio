@@ -65,10 +65,10 @@ namespace SoundIO
 
         #region Native methods
 
-        [DllImport("SoundIO.dll", EntryPoint="soundio_channel_layout_builtin_count")]
+        [DllImport(Config.DllName, EntryPoint="soundio_channel_layout_builtin_count")]
         extern static int _BuiltinCount();
 
-        [DllImport("SoundIO.dll", EntryPoint="soundio_channel_layout_get_builtin")]
+        [DllImport(Config.DllName, EntryPoint="soundio_channel_layout_get_builtin")]
         extern static ref readonly ChannelLayout _GetBuiltin(Builtin id);
 
         #endregion

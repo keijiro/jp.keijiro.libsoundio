@@ -92,40 +92,40 @@ namespace SoundIO
 
         #region Native methods
 
-        [DllImport("SoundIO.dll", EntryPoint="soundio_create")]
+        [DllImport(Config.DllName, EntryPoint="soundio_create")]
         extern static Context _Create();
 
-        [DllImport("SoundIO.dll", EntryPoint="soundio_destroy")]
+        [DllImport(Config.DllName, EntryPoint="soundio_destroy")]
         extern static void _Destroy(IntPtr context);
 
-        [DllImport("SoundIO.dll", EntryPoint="soundio_connect")]
+        [DllImport(Config.DllName, EntryPoint="soundio_connect")]
         extern static Error _Connect(Context context);
 
-        [DllImport("SoundIO.dll", EntryPoint="soundio_connect_backend")]
+        [DllImport(Config.DllName, EntryPoint="soundio_connect_backend")]
         extern static Error _Connect(Context context, Backend backend);
 
-        [DllImport("SoundIO.dll", EntryPoint="soundio_disconnect")]
+        [DllImport(Config.DllName, EntryPoint="soundio_disconnect")]
         extern static void _Disconnect(Context context);
 
-        [DllImport("SoundIO.dll", EntryPoint="soundio_flush_events")]
+        [DllImport(Config.DllName, EntryPoint="soundio_flush_events")]
         extern static void _FlushEvents(Context context);
 
-        [DllImport("SoundIO.dll", EntryPoint="soundio_output_device_count")]
+        [DllImport(Config.DllName, EntryPoint="soundio_output_device_count")]
         extern static int _OutputDeviceCount(Context context);
 
-        [DllImport("SoundIO.dll", EntryPoint="soundio_input_device_count")]
+        [DllImport(Config.DllName, EntryPoint="soundio_input_device_count")]
         extern static int _InputDeviceCount(Context context);
 
-        [DllImport("SoundIO.dll", EntryPoint="soundio_get_input_device")]
+        [DllImport(Config.DllName, EntryPoint="soundio_get_input_device")]
         extern static Device _GetInputDevice(Context context, int index);
 
-        [DllImport("SoundIO.dll", EntryPoint="soundio_get_output_device")]
+        [DllImport(Config.DllName, EntryPoint="soundio_get_output_device")]
         extern static Device _GetOutputDevice(Context context, int index);
 
-        [DllImport("SoundIO.dll", EntryPoint="soundio_default_input_device_index")]
+        [DllImport(Config.DllName, EntryPoint="soundio_default_input_device_index")]
         extern static int _DefaultInputDeviceIndex(Context context);
 
-        [DllImport("SoundIO.dll", EntryPoint="soundio_default_output_device_index")]
+        [DllImport(Config.DllName, EntryPoint="soundio_default_output_device_index")]
         extern static int _DefaultOutputDeviceIndex(Context context);
 
         #endregion
