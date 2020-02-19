@@ -174,6 +174,7 @@ public sealed class DeviceSelector : MonoBehaviour
     static SoundIO.InStream.OverflowCallbackDelegate _overflowCallback = OnOverflowInStream;
     static SoundIO.InStream.ErrorCallbackDelegate _errorCallback = OnErrorInStream;
 
+    [AOT.MonoPInvokeCallback(typeof(SoundIO.InStream.ReadCallbackDelegate))]
     unsafe static void
         OnReadInStream(ref SoundIO.InStreamData stream, int frameMin, int frameMax)
     {
@@ -209,11 +210,13 @@ public sealed class DeviceSelector : MonoBehaviour
         }
     }
 
+    [AOT.MonoPInvokeCallback(typeof(SoundIO.InStream.OverflowCallbackDelegate))]
     static void OnOverflowInStream(ref SoundIO.InStreamData stream)
     {
         Debug.LogWarning("InStream overflow");
     }
 
+    [AOT.MonoPInvokeCallback(typeof(SoundIO.InStream.ErrorCallbackDelegate))]
     static void OnErrorInStream(ref SoundIO.InStreamData stream, SoundIO.Error error)
     {
         Debug.LogError($"InStream error ({error})");
