@@ -158,8 +158,6 @@ namespace UnitySioTest
                 !device.IsRaw &&
                 // It should have at least one channel.
                 device.CurrentLayout.ChannelCount > 0 &&
-                // It should support 48kHz sampling rate.
-                device.SampleRates.ToArray().Contains(48000) &&
                 // It should support the float 32-bit little ending format.
                 device.Formats.ToArray().Contains(SoundIO.Format.Float32LE);
         }
