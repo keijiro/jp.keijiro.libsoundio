@@ -6,40 +6,64 @@ namespace UnitySioTest
 {
     public sealed class DeviceSelector : MonoBehaviour
     {
-        [SerializeField] SoundIODriver _driver = null;
         [SerializeField] Dropdown _deviceList = null;
         [SerializeField] Dropdown _channelList = null;
         [SerializeField] Text _statusText = null;
+        [SerializeField] WaveformRenderer _renderer = null;
 
-        public int Channel => _channelList.value;
+        InputStream _stream;
 
         void Start()
         {
-            // Device list initialization
+            // Clear the UI contents.
             _deviceList.ClearOptions();
-            _deviceList.options = _driver.GetDeviceNameList().
-                Select(name => new Dropdown.OptionData(){ text = name }).ToList();
+            _channelList.ClearOptions();
+            _statusText.text = "";
 
-            // Select the first device.
-            if (_driver.DeviceCount > 0) OnDeviceSelected(0);
+            // Device list initialization
+            _deviceList.options.Add(new Dropdown.OptionData(){ text = "--" });
+
+            for (var i = 0; i < DeviceDriver.DeviceCount; i++)
+                _deviceList.options.Add(
+                    new Dropdown.OptionData()
+                        { text = DeviceDriver.GetDeviceName(i) }
+                );
 
             _deviceList.RefreshShownValue();
         }
 
+        void OnDestroy()
+        {
+            _stream?.Dispose();
+        }
+
         public void OnDeviceSelected(int index)
         {
-            _driver.SelectDevice(index);
+            // Close the previous stream.
+            if (_stream != null)
+            {
+                _renderer.Stream = null;
+                _stream.Dispose();
+                _stream = null;
+            }
 
-            // Channel list (re)initialization
+            if (_deviceList.value == 0) return;
+
+            // Open a new stream.
+            _stream = DeviceDriver.OpenStream(_deviceList.value - 1);
+            _renderer.Stream = _stream;
+
+            // Construct the channel list.
             _channelList.ClearOptions();
 
-            _channelList.options = Enumerable.Range(0, _driver.ChannelCount).
+            _channelList.options = Enumerable.Range(0, _stream.ChannelCount).
                 Select(i => new Dropdown.OptionData(){ text = $"Channel {i + 1}" }).ToList();
 
             _channelList.RefreshShownValue();
 
+            // Status line
             _statusText.text =
-                $"{_driver.SampleRate} Hz {_driver.Latency * 1000} ms software latency";
+                $"{_stream.SampleRate} Hz {_stream.Latency * 1000} ms software latency";
         }
     }
 }

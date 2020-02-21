@@ -10,17 +10,16 @@ namespace UnitySioTest
     {
         #region Editable attributes
 
-        [SerializeField] SoundIODriver _driver = null;
-        [SerializeField] DeviceSelector _selector = null;
         [SerializeField, Range(16, 1024)] int _resolution = 512;
         [SerializeField, Range(0, 100)] float _amplitude = 10;
         [SerializeField] Material _material = null;
 
         #endregion
 
-        #region Internal objects
+        #region Public property
 
-        Mesh _mesh;
+        public InputStream Stream { get; set; }
+        public int Channel { get; set; }
 
         #endregion
 
@@ -28,10 +27,12 @@ namespace UnitySioTest
 
         void Update()
         {
-            var span = MemoryMarshal.Cast<byte, float>(_driver.InputBuffer);
+            if (Stream == null) return;
+
+            var span = MemoryMarshal.Cast<byte, float>(Stream.LastFrameWindow);
             if (span.Length == 0) return;
 
-            UpdateMesh(span, _driver.ChannelCount, _selector.Channel);
+            UpdateMesh(span, Stream.ChannelCount, Channel);
 
             Graphics.DrawMesh(
                 _mesh, transform.localToWorldMatrix,
@@ -46,7 +47,9 @@ namespace UnitySioTest
 
         #endregion
 
-        #region Mesh reconstruction
+        #region Mesh generator
+
+        Mesh _mesh;
 
         void UpdateMesh(ReadOnlySpan<float> input, int stride, int offset)
         {

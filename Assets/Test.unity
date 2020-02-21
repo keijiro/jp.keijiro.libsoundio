@@ -460,8 +460,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2711405b083e76e4bad6382e033c30a6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _driver: {fileID: 307759596}
-  _selector: {fileID: 1695685554}
   _resolution: 512
   _amplitude: 10
   _material: {fileID: 2100000, guid: 7baa6452cd667084e86b064a40321d3b, type: 2}
@@ -477,7 +475,7 @@ Transform:
   m_LocalScale: {x: 18, y: 1.3, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 5
+  m_RootOrder: 4
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &246380486
 GameObject:
@@ -790,49 +788,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 301817256}
   m_CullTransparentMesh: 0
---- !u!1 &307759595
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 307759597}
-  - component: {fileID: 307759596}
-  m_Layer: 0
-  m_Name: Driver
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &307759596
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 307759595}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f6f177552c3126d429d18a9047c7e690, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
---- !u!4 &307759597
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 307759595}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_RootOrder: 3
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &406112112
 GameObject:
   m_ObjectHideFlags: 0
@@ -2602,10 +2557,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 10088a742a67f544f84ed267b5304670, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _driver: {fileID: 307759596}
   _deviceList: {fileID: 540649018}
   _channelList: {fileID: 301817258}
   _statusText: {fileID: 1837751032}
+  _renderer: {fileID: 132357279}
 --- !u!4 &1695685555
 Transform:
   m_ObjectHideFlags: 0
@@ -2618,7 +2573,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 4
+  m_RootOrder: 3
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1713828312
 GameObject:
