@@ -13,7 +13,10 @@ namespace UnitySioTest
         #region Public properties and methods
 
         public int DeviceCount => _validDevices.Count;
-        public int ChannelCount => _dev.CurrentLayout.ChannelCount;
+        public int ChannelCount => _ins.Layout.ChannelCount;
+
+        public int SampleRate { get; private set; }
+        public float Latency { get; private set; }
 
         public ReadOnlyCollection<string> GetDeviceNameList() =>
             _validDevices.Select(pair => pair.name).ToList().AsReadOnly();
@@ -49,7 +52,8 @@ namespace UnitySioTest
             }
 
             _ins.Format = SoundIO.Format.Float32LE;
-            _ins.SoftwareLatency = 1.0 / 60;
+            _ins.Layout = _dev.Layouts[0];
+            _ins.SoftwareLatency = Math.Max(1.0 / 60, _dev.SoftwareLatencyMin);
             _ins.ReadCallback = _readCallback;
             _ins.OverflowCallback = _overflowCallback;
             _ins.ErrorCallback = _errorCallback;
@@ -64,6 +68,10 @@ namespace UnitySioTest
             }
 
             _ins.Start();
+
+            // Stream properties
+            SampleRate = _ins.SampleRate;
+            Latency = (float)_ins.SoftwareLatency;
         }
 
         public void CloseCurrentDevice()
@@ -154,10 +162,8 @@ namespace UnitySioTest
         bool IsValidDevice(SoundIO.Device device)
         {
             return
-                // We prefer non-raw devices.
-                !device.IsRaw &&
-                // It should have at least one channel.
-                device.CurrentLayout.ChannelCount > 0 &&
+                // It should have at least one channel layout.
+                device.Layouts.Length > 0 &&
                 // It should support the float 32-bit little ending format.
                 device.Formats.ToArray().Contains(SoundIO.Format.Float32LE);
         }

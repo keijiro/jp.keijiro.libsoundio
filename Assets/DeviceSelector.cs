@@ -9,6 +9,7 @@ namespace UnitySioTest
         [SerializeField] SoundIODriver _driver = null;
         [SerializeField] Dropdown _deviceList = null;
         [SerializeField] Dropdown _channelList = null;
+        [SerializeField] Text _statusText = null;
 
         public int Channel => _channelList.value;
 
@@ -36,6 +37,9 @@ namespace UnitySioTest
                 Select(i => new Dropdown.OptionData(){ text = $"Channel {i + 1}" }).ToList();
 
             _channelList.RefreshShownValue();
+
+            _statusText.text =
+                $"{_driver.SampleRate} Hz {_driver.Latency * 1000} ms software latency";
         }
     }
 }
