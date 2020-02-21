@@ -25,6 +25,8 @@ namespace UnitySioTest
         {
             CloseCurrentDevice();
 
+            lock (_ring) _ring.Clear();
+
             // Open the given device.
             _dev = _sio.GetInputDevice(_validDevices[index].index);
 
@@ -72,6 +74,9 @@ namespace UnitySioTest
             // Stream properties
             SampleRate = _ins.SampleRate;
             Latency = (float)_ins.SoftwareLatency;
+
+            // Single frame window buffer
+            _window = new byte[sizeof(float) * ChannelCount * SampleRate * 5 / 60];
         }
 
         public void CloseCurrentDevice()
@@ -80,21 +85,8 @@ namespace UnitySioTest
             if (IsValid(_dev)) _dev.Close();
         }
 
-        public bool TryReadInput(Span<byte> dest)
-        {
-            var read = false;
-
-            lock (_ring)
-            {
-                while (_ring.FillCount > dest.Length)
-                {
-                    _ring.Read(dest);
-                    read = true;
-                }
-            }
-
-            return read;
-        }
+        public ReadOnlySpan<byte> InputBuffer =>
+            new ReadOnlySpan<byte>(_window, 0, _windowSize);
 
         #endregion
 
@@ -113,6 +105,10 @@ namespace UnitySioTest
 
         // Input stream ring buffer
         RingBuffer _ring = new RingBuffer(256 * 1024);
+
+        // Single frame window
+        byte[] _window;
+        int _windowSize;
 
         #endregion
 
@@ -151,6 +147,13 @@ namespace UnitySioTest
         void Update()
         {
             if (IsValid(_sio)) _sio.FlushEvents();
+
+            var frames = (int)(ChannelCount * SampleRate * UnityEngine.Time.deltaTime);
+            _windowSize = sizeof(float) * frames;
+
+            lock (_ring)
+                if (_ring.FillCount > _windowSize)
+                    _ring.Read(new Span<byte>(_window, 0, _windowSize));
         }
 
         #endregion

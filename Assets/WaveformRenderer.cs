@@ -21,7 +21,6 @@ namespace UnitySioTest
         #region Internal objects
 
         Mesh _mesh;
-        byte[] _tempBuffer;
 
         #endregion
 
@@ -29,23 +28,15 @@ namespace UnitySioTest
 
         void Update()
         {
-            var stride = _driver.ChannelCount;
-            var length = _resolution * stride * sizeof(float);
+            var span = MemoryMarshal.Cast<byte, float>(_driver.InputBuffer);
+            if (span.Length == 0) return;
 
-            if (_tempBuffer == null || _tempBuffer.Length != length)
-                _tempBuffer = new byte[length];
+            UpdateMesh(span, _driver.ChannelCount, _selector.Channel);
 
-            var byteSpan = new Span<byte>(_tempBuffer);
-            var floatSpan = MemoryMarshal.Cast<byte, float>(byteSpan);
-
-            if (_driver.TryReadInput(byteSpan))
-                UpdateMesh(floatSpan, stride, _selector.Channel);
-
-            if (_mesh != null)
-                Graphics.DrawMesh(
-                    _mesh, transform.localToWorldMatrix,
-                    _material, gameObject.layer
-                );
+            Graphics.DrawMesh(
+                _mesh, transform.localToWorldMatrix,
+                _material, gameObject.layer
+            );
         }
 
         void OnDestroy()
@@ -119,8 +110,8 @@ namespace UnitySioTest
 
             for (var vi = 0; vi < _resolution; vi++)
             {
-                var i = vi * stride + offset;
-                var v = i < input.Length ? input[i] : 0;
+                var i = (vi * (input.Length / stride) / _resolution) * stride + offset;
+                var v = input[i];
 
                 var x = (float)vi / _resolution;
                 var y = v * _amplitude;

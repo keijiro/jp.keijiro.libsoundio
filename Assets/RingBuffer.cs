@@ -16,6 +16,11 @@ public sealed class RingBuffer
     int  ReadOffset => (int)( _readCount % (ulong)Capacity);
     int WriteOffset => (int)(_writeCount % (ulong)Capacity);
 
+    public void Clear()
+    {
+        _readCount = _writeCount = 0;
+    }
+
     public void Write(ReadOnlySpan<byte> data)
     {
         if (FreeCount == 0)
@@ -93,4 +98,3 @@ public sealed class RingBuffer
         _readCount += (ulong)dest.Length;
     }
 }
-
