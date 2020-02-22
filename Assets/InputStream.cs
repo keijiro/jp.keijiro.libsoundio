@@ -29,7 +29,8 @@ namespace UnitySioTest
         public void Update()
         {
             var dt = UnityEngine.Time.deltaTime;
-            _windowSize = sizeof(float) * (int)(ChannelCount * SampleRate * dt);
+            var frameCount = (int)(ChannelCount * SampleRate * dt);
+            _windowSize = Math.Min(sizeof(float) * frameCount, BufferSize);
 
             lock (_ring)
                 if (_ring.FillCount > _windowSize)
