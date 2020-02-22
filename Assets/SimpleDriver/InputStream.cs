@@ -1,9 +1,24 @@
+// Simple example driver for soundio
+// https://github.com/keijiro/jp.keijiro.libsoundio
+
 using System;
 using System.Runtime.InteropServices;
 using InvalidOp = System.InvalidOperationException;
 
 namespace SoundIO.SimpleDriver
 {
+    //
+    // High-level wrapper class for SoundIoInStream
+    //
+    // - Manages an InStream object.
+    // - Manages the sound input ring buffer.
+    // - Provides the "last frame window" that exposes incoming sound data that
+    //   was received in the last frame.
+    // - Implements callback functions for the InStream object.
+    //
+    // Note that the last frame window doesn't provide the data for the ACTUAL
+    // last frame. There must be latency caused by software/hardware.
+    //
     public sealed class InputStream : IDisposable
     {
         #region Public properties and methods
@@ -12,22 +27,21 @@ namespace SoundIO.SimpleDriver
         public int SampleRate => _stream.SampleRate;
         public float Latency => (float)_stream.SoftwareLatency;
 
-        public bool IsValid =>
-            _stream != null && !_stream.IsClosed && !_stream.IsInvalid;
+        public bool IsValid => _stream != null && !_stream.IsInvalid;
 
         public ReadOnlySpan<byte> LastFrameWindow =>
             new ReadOnlySpan<byte>(_window, 0, _windowSize);
 
         public void Dispose()
         {
-            if (Validate(_stream)) _stream.Dispose();
-            if (Validate(_device)) _device.Dispose();
+            _stream?.Dispose();
+            _device?.Dispose();
             _self.Free();
         }
 
         public void Update()
         {
-            // Last frame window calculation
+            // Last frame window size
             var dt = UnityEngine.Time.deltaTime;
             _windowSize = Math.Min(_window.Length, CalculateBufferSize(dt));
 
@@ -54,7 +68,7 @@ namespace SoundIO.SimpleDriver
 
             try
             {
-                if (!Validate(_stream))
+                if (_stream.IsInvalid)
                     throw new InvalidOp("Stream allocation error");
 
                 if (_device.Layouts.Length == 0)
@@ -93,6 +107,8 @@ namespace SoundIO.SimpleDriver
                 // Dispose resources on exception.
                 _stream.Dispose();
                 _device.Dispose();
+                _stream = null;
+                _device = null;
                 throw;
             }
         }
@@ -101,26 +117,25 @@ namespace SoundIO.SimpleDriver
 
         #region Internal objects
 
-        // A handle used to share 'this' pointer with DLL
+        // GC handle used to share 'this' pointer with unmanaged code
         GCHandle _self;
 
-        // Safe handles
+        // SoundIO objects
         Device _device;
         InStream _stream;
 
         // Input stream ring buffer
+        // This object will be accessed from both the main and callback thread.
+        // Must be locked when using.
         RingBuffer _ring;
 
-        // Single frame window
+        // Buffer for last frame window
         byte[] _window;
         int _windowSize;
 
         #endregion
 
-        #region Internal methods
-
-        bool Validate(SafeHandle handle) =>
-            handle != null && !handle.IsInvalid && !handle.IsClosed;
+        #region Internal function
 
         int CalculateBufferSize(float second) =>
             sizeof(float) * (int)(ChannelCount * SampleRate * second);
@@ -134,28 +149,27 @@ namespace SoundIO.SimpleDriver
         static InStream.ErrorCallbackDelegate _errorCallback = OnErrorInStream;
 
         [AOT.MonoPInvokeCallback(typeof(InStream.ReadCallbackDelegate))]
-        unsafe static void OnReadInStream(ref InStreamData stream, int frameMin, int frameMax)
+        unsafe static void OnReadInStream(ref InStreamData stream, int min, int left)
         {
             // Recover the 'this' reference from the UserData pointer.
             var self = (InputStream)GCHandle.FromIntPtr(stream.UserData).Target;
 
-            // Receive the input data as much as possible.
-            for (var left = frameMax; left > 0;)
+            while (left > 0)
             {
                 // Start reading the buffer.
-                var frameCount = left;
+                var count = left;
                 ChannelArea* areas;
-                stream.BeginRead(out areas, ref frameCount);
+                stream.BeginRead(out areas, ref count);
 
-                // When getting frameCount == 0, we must stop reading
+                // When getting count == 0, we must stop reading
                 // immediately without calling InStream.EndRead.
-                if (frameCount == 0) break;
+                if (count == 0) break;
 
                 if (areas == null)
                 {
                     // We must do zero-fill when receiving a null pointer.
                     lock (self._ring)
-                        self._ring.WriteEmpty(frameCount * stream.BytesPerFrame);
+                        self._ring.WriteEmpty(stream.BytesPerFrame * count);
                 }
                 else
                 {
@@ -164,7 +178,7 @@ namespace SoundIO.SimpleDriver
                     // TODO: Is this assumption always true?
                     var span = new ReadOnlySpan<Byte>(
                         (void*)areas[0].Pointer,
-                        areas[0].Step * frameCount
+                        areas[0].Step * count
                     );
 
                     // Transfer the data to the ring buffer.
@@ -173,7 +187,7 @@ namespace SoundIO.SimpleDriver
 
                 stream.EndRead();
 
-                left -= frameCount;
+                left -= count;
             }
         }
 

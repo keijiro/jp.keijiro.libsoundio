@@ -1,11 +1,12 @@
+// libsoundio C# thin wrapper class library
+// https://github.com/keijiro/jp.keijiro.libsoundio
+
 using System;
 using System.Runtime.InteropServices;
 
 namespace SoundIO
 {
-    //
-    // Basic structs used in libsoundio API
-    //
+    // Basic structs defined in libsoundio
 
     [StructLayout(LayoutKind.Sequential)]
     public struct SampleRateRange

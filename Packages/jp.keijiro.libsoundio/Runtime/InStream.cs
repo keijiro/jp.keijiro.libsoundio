@@ -1,3 +1,6 @@
+// libsoundio C# thin wrapper class library
+// https://github.com/keijiro/jp.keijiro.libsoundio
+
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -5,13 +8,11 @@ using Microsoft.Win32.SafeHandles;
 
 namespace SoundIO
 {
-    //
-    // SoundIoInStream struct representation
-    //
+    // SoundIoInStream struct representation (used in read-callback)
     [StructLayout(LayoutKind.Sequential)]
     public struct InStreamData
     {
-        #region Data members
+        #region Struct data members
 
         internal IntPtr device;
         internal Format format;
@@ -30,7 +31,7 @@ namespace SoundIO
 
         #endregion
 
-        #region Read-only accessors
+        #region Struct member accessors
 
         public Format Format => format;
         public int SampleRate => sampleRate;
@@ -56,9 +57,13 @@ namespace SoundIO
             return _EndRead(ref this);
         }
 
+        #endregion
+
+        #region Unmanaged functions
+
         [DllImport(Config.DllName, EntryPoint="soundio_instream_begin_read")]
-        unsafe extern static Error
-            _BeginRead(ref InStreamData stream, out ChannelArea* areas, ref int frameCount);
+        unsafe extern static Error _BeginRead
+            (ref InStreamData stream, out ChannelArea* areas, ref int frameCount);
 
         [DllImport(Config.DllName, EntryPoint="soundio_instream_end_read")]
         extern static Error _EndRead(ref InStreamData stream);
@@ -66,9 +71,7 @@ namespace SoundIO
         #endregion
     }
 
-    //
     // SoundIoInStream struct wrapper class
-    //
     public class InStream : SafeHandleZeroOrMinusOneIsInvalid
     {
         #region SafeHandle implementation
@@ -167,7 +170,7 @@ namespace SoundIO
 
         #endregion
 
-        #region Native methods
+        #region Unmanaged functions
 
         [DllImport(Config.DllName, EntryPoint="soundio_instream_destroy")]
         extern static void _Destroy(IntPtr stream);

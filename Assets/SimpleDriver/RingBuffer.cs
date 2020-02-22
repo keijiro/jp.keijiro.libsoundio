@@ -1,7 +1,13 @@
+// Simple example driver for soundio
+// https://github.com/keijiro/jp.keijiro.libsoundio
+
 using System;
 
 namespace SoundIO.SimpleDriver
 {
+    //
+    // A simple implementation of ring buffer
+    //
     public sealed class RingBuffer
     {
         byte[] _buffer;

@@ -1,3 +1,6 @@
+// libsoundio C# thin wrapper class library
+// https://github.com/keijiro/jp.keijiro.libsoundio
+
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -5,9 +8,7 @@ using Microsoft.Win32.SafeHandles;
 
 namespace SoundIO
 {
-    //
     // SoundIoDevice struct wrapper class
-    //
     public class Device : SafeHandleZeroOrMinusOneIsInvalid
     {
         #region SoundIoDevice struct representation
@@ -98,7 +99,7 @@ namespace SoundIO
 
         #endregion
 
-        #region Native methods
+        #region Unmanaged functions
 
         [DllImport(Config.DllName, EntryPoint="soundio_device_unref")]
         extern static void _Unref(IntPtr device);

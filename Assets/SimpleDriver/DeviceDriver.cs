@@ -1,3 +1,6 @@
+// Simple example driver for soundio
+// https://github.com/keijiro/jp.keijiro.libsoundio
+
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine.LowLevel;
@@ -6,6 +9,10 @@ namespace SoundIO.SimpleDriver
 {
     //
     // Singleton device driver class
+    //
+    // This class manages the single soundio context and input stream objects
+    // created in the context. It also implements a Player Loop System and
+    // invokes the Update methods in the EarlyUpdate phase every frame.
     //
     public static class DeviceDriver
     {
@@ -22,6 +29,8 @@ namespace SoundIO.SimpleDriver
 
         public static InputStream OpenInputStream(int deviceIndex)
         {
+            // Note: The ownership of the device object will be transferred to
+            // the input stream object.
             var stream = new InputStream(Context.GetInputDevice(deviceIndex));
 
             if (stream.IsValid)
@@ -38,7 +47,7 @@ namespace SoundIO.SimpleDriver
 
         #endregion
 
-        #region SoundIO context
+        #region SoundIO context management
 
         static Context Context => GetContextWithLazyInitialization();
 
@@ -49,24 +58,27 @@ namespace SoundIO.SimpleDriver
             if (_context == null)
             {
                 _context = Context.Create();
+
                 _context.Connect();
                 _context.FlushEvents();
 
+                // Install the Player Loop System.
                 InsertPlayerLoopSystem();
 
                 #if UNITY_EDITOR
                 // We use not only PlayerLoopSystem but also the
-                // EditorApplication.update callback because the PlayerLoop events
-                // are not invoked in the edit mode.
+                // EditorApplication.update callback because the PlayerLoop
+                // events are not invoked in the edit mode.
                 UnityEditor.EditorApplication.update += () => Update();
                 #endif
             }
+
             return _context;
         }
 
         #endregion
 
-        #region Internal methods
+        #region Update method implementation
 
         static List<InputStream> _inputStreams = new List<InputStream>();
 
@@ -94,7 +106,8 @@ namespace SoundIO.SimpleDriver
 
         static void InsertPlayerLoopSystem()
         {
-            var customSystem = new PlayerLoopSystem() {
+            var customSystem = new PlayerLoopSystem()
+            {
                 type = typeof(DeviceDriver),
                 updateDelegate = () => DeviceDriver.Update()
             };
@@ -106,8 +119,8 @@ namespace SoundIO.SimpleDriver
                 ref var phase = ref playerLoop.subSystemList[i];
                 if (phase.type == typeof(UnityEngine.PlayerLoop.EarlyUpdate))
                 {
-                    phase.subSystemList =
-                        phase.subSystemList.Concat(new [] { customSystem }).ToArray();
+                    phase.subSystemList = phase.subSystemList.
+                        Concat(new[]{ customSystem }).ToArray();
                     break;
                 }
             }

@@ -1,12 +1,18 @@
+// libsoundio C# thin wrapper class library
+// https://github.com/keijiro/jp.keijiro.libsoundio
+
 using System;
 using System.Runtime.InteropServices;
 
 namespace SoundIO
 {
+    // SoundIoChannelLayout struct representation
     [StructLayout(LayoutKind.Sequential)]
     public struct ChannelLayout
     {
-        #region Struct data
+        #region Struct data members
+
+        const int MaxChannels = 24;
 
         IntPtr _name;
         int _channelCount;
@@ -14,15 +20,14 @@ namespace SoundIO
 
         #endregion
 
-        #region Public properties
-
-        public const int MaxChannels = 24;
+        #region Struct member accessors
 
         public string Name => Marshal.PtrToStringAnsi(_name);
         public int ChannelCount => _channelCount;
 
         unsafe public ReadOnlySpan<Channel> Channels { get {
-            fixed (int* p = _channels) return new ReadOnlySpan<Channel>(p, ChannelCount);
+            fixed (int* p = _channels)
+                return new ReadOnlySpan<Channel>(p, ChannelCount);
         } }
 
         #endregion
@@ -63,7 +68,7 @@ namespace SoundIO
 
         #endregion
 
-        #region Native methods
+        #region Unmanaged functions
 
         [DllImport(Config.DllName, EntryPoint="soundio_channel_layout_builtin_count")]
         extern static int _BuiltinCount();

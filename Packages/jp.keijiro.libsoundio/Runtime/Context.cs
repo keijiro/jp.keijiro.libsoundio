@@ -1,3 +1,6 @@
+// libsoundio C# thin wrapper class library
+// https://github.com/keijiro/jp.keijiro.libsoundio
+
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -5,9 +8,7 @@ using Microsoft.Win32.SafeHandles;
 
 namespace SoundIO
 {
-    //
     // SoundIo struct wrapper class
-    //
     public class Context : SafeHandleZeroOrMinusOneIsInvalid
     {
         #region SoundIo struct representation
@@ -90,7 +91,7 @@ namespace SoundIO
 
         #endregion
 
-        #region Native methods
+        #region Unmanaged functions
 
         [DllImport(Config.DllName, EntryPoint="soundio_create")]
         extern static Context _Create();

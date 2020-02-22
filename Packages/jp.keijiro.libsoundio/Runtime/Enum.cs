@@ -1,8 +1,9 @@
+// libsoundio C# thin wrapper class library
+// https://github.com/keijiro/jp.keijiro.libsoundio
+
 namespace SoundIO
 {
-    //
     // Enumerations defined in libsoundio
-    //
 
     public enum Error
     {
@@ -25,16 +26,13 @@ namespace SoundIO
 
     public enum Backend
     {
-        None,
-        Jack,
-        PulseAudio,
-        Alsa,
-        CoreAudio,
-        Wasapi,
-        Dummy
+        None, Jack, PulseAudio, Alsa, CoreAudio, Wasapi, Dummy
     }
 
-    public enum DeviceAim { Input, Output };
+    public enum DeviceAim
+    {
+        Input, Output
+    };
 
     public enum Format
     {
