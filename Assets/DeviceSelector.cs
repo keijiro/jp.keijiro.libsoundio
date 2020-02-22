@@ -39,26 +39,37 @@ namespace UnitySioTest
 
         public void OnDeviceSelected(int index)
         {
-            // Close the previous stream.
+            // Reset the current state.
+            _renderer.Stream = null;
+
             if (_stream != null)
             {
-                _renderer.Stream = null;
                 _stream.Dispose();
                 _stream = null;
             }
 
+            _channelList.ClearOptions();
+            _channelList.RefreshShownValue();
+
+            _statusText.text = "";
+
+            // Break if no selection.
             if (_deviceList.value == 0) return;
 
             // Open a new stream.
-            _stream = DeviceDriver.OpenInputStream(_deviceList.value - 1);
+            try
+            {
+                _stream = DeviceDriver.OpenInputStream(_deviceList.value - 1);
+            }
+            catch (System.InvalidOperationException e)
+            {
+                _statusText.text = $"Error: {e.Message}";
+                return;
+            }
+
             _renderer.Stream = _stream;
 
-            // Break if failed to open.
-            if (_stream == null) return;
-
             // Construct the channel list.
-            _channelList.ClearOptions();
-
             _channelList.options = Enumerable.Range(0, _stream.ChannelCount).
                 Select(i => new Dropdown.OptionData(){ text = $"Channel {i + 1}" }).ToList();
 

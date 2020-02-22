@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 using Debug = UnityEngine.Debug;
+using InvalidOp = System.InvalidOperationException;
 
 namespace UnitySioTest
 {
@@ -45,43 +46,40 @@ namespace UnitySioTest
             _device = deviceToOwn;
             _stream = SoundIO.InStream.Create(_device);
 
-            if (!Validate(_stream))
+            try
             {
-                Debug.LogWarning("Input stream allocation failed.");
-                return;
-            }
+                if (!Validate(_stream))
+                    throw new InvalidOp("Stream allocation error");
 
-            if (_device.Layouts.Length == 0)
+                if (_device.Layouts.Length == 0)
+                    throw new InvalidOp("No channel layout");
+
+                // Calculate the best latency. FIXME: Use target frame rate?
+                var bestLatency = Math.Max(1.0 / 60, _device.SoftwareLatencyMin);
+
+                // Stream properties
+                _stream.Format = SoundIO.Format.Float32LE;
+                _stream.Layout = _device.Layouts[0];
+                _stream.SoftwareLatency = bestLatency;
+                _stream.ReadCallback = _readCallback;
+                _stream.OverflowCallback = _overflowCallback;
+                _stream.ErrorCallback = _errorCallback;
+                _stream.UserData = GCHandle.ToIntPtr(_self);
+
+                var err = _stream.Open();
+
+                if (err != SoundIO.Error.None)
+                    throw new InvalidOp($"Stream initialization error ({err})");
+
+                _stream.Start();
+            }
+            catch
             {
-                Debug.LogWarning($"No channel layout: {_device.Name}");
+                // Dispose resources on exception.
                 _stream.Dispose();
                 _device.Dispose();
-                return;
+                throw;
             }
-
-            // Calculate the best latency. FIXME: Use target frame rate?
-            var bestLatency = Math.Max(1.0 / 60, _device.SoftwareLatencyMin);
-
-            // Stream properties
-            _stream.Format = SoundIO.Format.Float32LE;
-            _stream.Layout = _device.Layouts[0];
-            _stream.SoftwareLatency = bestLatency;
-            _stream.ReadCallback = _readCallback;
-            _stream.OverflowCallback = _overflowCallback;
-            _stream.ErrorCallback = _errorCallback;
-            _stream.UserData = GCHandle.ToIntPtr(_self);
-
-            var err = _stream.Open();
-
-            if (err != SoundIO.Error.None)
-            {
-                Debug.LogWarning($"Input stream initialization error: {_device.Name}");
-                _stream.Dispose();
-                _device.Dispose();
-                return;
-            }
-
-            _stream.Start();
         }
 
         #endregion
