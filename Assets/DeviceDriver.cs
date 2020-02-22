@@ -16,7 +16,8 @@ namespace UnitySioTest
 
         public static string GetDeviceName(int index)
         {
-            using(var dev = Context.GetInputDevice(index)) return dev.Name;
+            using(var dev = Context.GetInputDevice(index))
+                return dev.IsRaw ? "Raw: " + dev.Name : dev.Name;
         }
 
         public static InputStream OpenInputStream(int deviceIndex)
