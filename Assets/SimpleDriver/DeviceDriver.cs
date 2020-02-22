@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine.LowLevel;
 
-namespace UnitySioTest
+namespace SoundIO.SimpleDriver
 {
     //
     // Singleton device driver class
@@ -40,15 +40,15 @@ namespace UnitySioTest
 
         #region SoundIO context
 
-        static SoundIO.Context Context => GetContextWithLazyInitialization();
+        static Context Context => GetContextWithLazyInitialization();
 
-        static SoundIO.Context _context;
+        static Context _context;
 
-        static SoundIO.Context GetContextWithLazyInitialization()
+        static Context GetContextWithLazyInitialization()
         {
             if (_context == null)
             {
-                _context = SoundIO.Context.Create();
+                _context = Context.Create();
                 _context.Connect();
                 _context.FlushEvents();
 

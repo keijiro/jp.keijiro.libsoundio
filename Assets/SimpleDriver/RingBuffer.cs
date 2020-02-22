@@ -1,6 +1,6 @@
 using System;
 
-namespace UnitySioTest
+namespace SoundIO.SimpleDriver
 {
     public sealed class RingBuffer
     {

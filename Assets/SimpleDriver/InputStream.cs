@@ -2,7 +2,7 @@ using System;
 using System.Runtime.InteropServices;
 using InvalidOp = System.InvalidOperationException;
 
-namespace UnitySioTest
+namespace SoundIO.SimpleDriver
 {
     public sealed class InputStream : IDisposable
     {
@@ -46,11 +46,11 @@ namespace UnitySioTest
 
         #region Constructor
 
-        public InputStream(SoundIO.Device deviceToOwn)
+        public InputStream(Device deviceToOwn)
         {
             _self = GCHandle.Alloc(this);
             _device = deviceToOwn;
-            _stream = SoundIO.InStream.Create(_device);
+            _stream = InStream.Create(_device);
 
             try
             {
@@ -64,7 +64,7 @@ namespace UnitySioTest
                 var bestLatency = Math.Max(1.0 / 60, _device.SoftwareLatencyMin);
 
                 // Stream properties
-                _stream.Format = SoundIO.Format.Float32LE;
+                _stream.Format = Format.Float32LE;
                 _stream.Layout = _device.Layouts[0];
                 _stream.SoftwareLatency = bestLatency;
                 _stream.ReadCallback = _readCallback;
@@ -74,7 +74,7 @@ namespace UnitySioTest
 
                 var err = _stream.Open();
 
-                if (err != SoundIO.Error.None)
+                if (err != Error.None)
                     throw new InvalidOp($"Stream initialization error ({err})");
 
                 // Determine the buffer size from the actual software latency.
@@ -105,8 +105,8 @@ namespace UnitySioTest
         GCHandle _self;
 
         // Safe handles
-        SoundIO.Device _device;
-        SoundIO.InStream _stream;
+        Device _device;
+        InStream _stream;
 
         // Input stream ring buffer
         RingBuffer _ring;
@@ -129,12 +129,12 @@ namespace UnitySioTest
 
         #region SoundIO callback delegates
 
-        static SoundIO.InStream.ReadCallbackDelegate _readCallback = OnReadInStream;
-        static SoundIO.InStream.OverflowCallbackDelegate _overflowCallback = OnOverflowInStream;
-        static SoundIO.InStream.ErrorCallbackDelegate _errorCallback = OnErrorInStream;
+        static InStream.ReadCallbackDelegate _readCallback = OnReadInStream;
+        static InStream.OverflowCallbackDelegate _overflowCallback = OnOverflowInStream;
+        static InStream.ErrorCallbackDelegate _errorCallback = OnErrorInStream;
 
-        [AOT.MonoPInvokeCallback(typeof(SoundIO.InStream.ReadCallbackDelegate))]
-        unsafe static void OnReadInStream(ref SoundIO.InStreamData stream, int frameMin, int frameMax)
+        [AOT.MonoPInvokeCallback(typeof(InStream.ReadCallbackDelegate))]
+        unsafe static void OnReadInStream(ref InStreamData stream, int frameMin, int frameMax)
         {
             // Recover the 'this' reference from the UserData pointer.
             var self = (InputStream)GCHandle.FromIntPtr(stream.UserData).Target;
@@ -144,7 +144,7 @@ namespace UnitySioTest
             {
                 // Start reading the buffer.
                 var frameCount = left;
-                SoundIO.ChannelArea* areas;
+                ChannelArea* areas;
                 stream.BeginRead(out areas, ref frameCount);
 
                 // When getting frameCount == 0, we must stop reading
@@ -177,14 +177,14 @@ namespace UnitySioTest
             }
         }
 
-        [AOT.MonoPInvokeCallback(typeof(SoundIO.InStream.OverflowCallbackDelegate))]
-        static void OnOverflowInStream(ref SoundIO.InStreamData stream)
+        [AOT.MonoPInvokeCallback(typeof(InStream.OverflowCallbackDelegate))]
+        static void OnOverflowInStream(ref InStreamData stream)
         {
             UnityEngine.Debug.LogWarning("InStream overflow");
         }
 
-        [AOT.MonoPInvokeCallback(typeof(SoundIO.InStream.ErrorCallbackDelegate))]
-        static void OnErrorInStream(ref SoundIO.InStreamData stream, SoundIO.Error error)
+        [AOT.MonoPInvokeCallback(typeof(InStream.ErrorCallbackDelegate))]
+        static void OnErrorInStream(ref InStreamData stream, Error error)
         {
             UnityEngine.Debug.LogError($"InStream error ({error})");
         }
