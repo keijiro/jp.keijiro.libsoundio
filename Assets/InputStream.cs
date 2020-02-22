@@ -1,6 +1,5 @@
 using System;
 using System.Runtime.InteropServices;
-using Debug = UnityEngine.Debug;
 using InvalidOp = System.InvalidOperationException;
 
 namespace UnitySioTest
@@ -28,13 +27,19 @@ namespace UnitySioTest
 
         public void Update()
         {
+            // Last frame window calculation
             var dt = UnityEngine.Time.deltaTime;
-            var frameCount = (int)(ChannelCount * SampleRate * dt);
-            _windowSize = Math.Min(sizeof(float) * frameCount, BufferSize);
+            _windowSize = Math.Min(_window.Length, CalculateBufferSize(dt));
 
             lock (_ring)
+            {
+                // Copy the last frame data into the window buffer.
                 if (_ring.FillCount > _windowSize)
                     _ring.Read(new Span<byte>(_window, 0, _windowSize));
+
+                // Reset the buffer if it's overflowed in the last frame.
+                if (_ring.OverflowCount > 0) _ring.Clear();
+            }
         }
 
         #endregion
@@ -72,6 +77,15 @@ namespace UnitySioTest
                 if (err != SoundIO.Error.None)
                     throw new InvalidOp($"Stream initialization error ({err})");
 
+                // Determine the buffer size from the actual software latency.
+                var latency = Math.Max(_stream.SoftwareLatency, bestLatency);
+                var bufferSize = CalculateBufferSize((float)(latency * 4));
+
+                // Ring/window buffer allocation
+                _ring = new RingBuffer(bufferSize);
+                _window = new byte[bufferSize];
+
+                // Start streaming.
                 _stream.Start();
             }
             catch
@@ -87,8 +101,6 @@ namespace UnitySioTest
 
         #region Internal objects
 
-        const int BufferSize = 128 * 1024;
-
         // A handle used to share 'this' pointer with DLL
         GCHandle _self;
 
@@ -97,17 +109,21 @@ namespace UnitySioTest
         SoundIO.InStream _stream;
 
         // Input stream ring buffer
-        RingBuffer _ring = new RingBuffer(BufferSize);
+        RingBuffer _ring;
 
         // Single frame window
-        byte[] _window = new byte[BufferSize];
+        byte[] _window;
         int _windowSize;
 
         #endregion
 
         #region Internal methods
 
-        bool Validate(SafeHandle handle) => handle != null && !handle.IsInvalid;
+        bool Validate(SafeHandle handle) =>
+            handle != null && !handle.IsInvalid && !handle.IsClosed;
+
+        int CalculateBufferSize(float second) =>
+            sizeof(float) * (int)(ChannelCount * SampleRate * second);
 
         #endregion
 
@@ -164,13 +180,13 @@ namespace UnitySioTest
         [AOT.MonoPInvokeCallback(typeof(SoundIO.InStream.OverflowCallbackDelegate))]
         static void OnOverflowInStream(ref SoundIO.InStreamData stream)
         {
-            Debug.LogWarning("InStream overflow");
+            UnityEngine.Debug.LogWarning("InStream overflow");
         }
 
         [AOT.MonoPInvokeCallback(typeof(SoundIO.InStream.ErrorCallbackDelegate))]
         static void OnErrorInStream(ref SoundIO.InStreamData stream, SoundIO.Error error)
         {
-            Debug.LogError($"InStream error ({error})");
+            UnityEngine.Debug.LogError($"InStream error ({error})");
         }
 
         #endregion

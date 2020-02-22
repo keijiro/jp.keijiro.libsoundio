@@ -14,26 +14,28 @@ namespace UnitySioTest
         public int Capacity => _buffer.Length;
         public int FillCount => (int)(_writeCount - _readCount);
         public int FreeCount => Capacity - FillCount;
+        public int OverflowCount { get; private set; }
 
         int  ReadOffset => (int)( _readCount % (ulong)Capacity);
         int WriteOffset => (int)(_writeCount % (ulong)Capacity);
 
         public void Clear()
         {
-            _readCount = _writeCount = 0;
+            _readCount = _writeCount = 0ul;
+            OverflowCount = 0;
         }
 
         public void Write(ReadOnlySpan<byte> data)
         {
             if (FreeCount == 0)
             {
-                UnityEngine.Debug.LogWarning("RingBuffer overflow");
+                OverflowCount++;
                 return;
             }
 
             if (data.Length > FreeCount)
             {
-                UnityEngine.Debug.LogWarning("RingBuffer overflow");
+                OverflowCount++;
                 data = data.Slice(data.Length - FreeCount);
             }
 
