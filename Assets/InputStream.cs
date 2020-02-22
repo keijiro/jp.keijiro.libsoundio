@@ -20,8 +20,8 @@ namespace UnitySioTest
 
         public void Dispose()
         {
-            if (Validate(_stream)) _stream.Close();
-            if (Validate(_device)) _device.Close();
+            if (Validate(_stream)) _stream.Dispose();
+            if (Validate(_device)) _device.Dispose();
             _self.Free();
         }
 
@@ -47,7 +47,15 @@ namespace UnitySioTest
 
             if (!Validate(_stream))
             {
-                Debug.LogError("Failed to create an input stream.");
+                Debug.LogWarning("Input stream allocation failed.");
+                return;
+            }
+
+            if (_device.Layouts.Length == 0)
+            {
+                Debug.LogWarning($"No channel layout: {_device.Name}");
+                _stream.Dispose();
+                _device.Dispose();
                 return;
             }
 
@@ -67,7 +75,9 @@ namespace UnitySioTest
 
             if (err != SoundIO.Error.None)
             {
-                Debug.LogError($"Falied to open an input stream ({err})");
+                Debug.LogWarning($"Input stream initialization error: {_device.Name}");
+                _stream.Dispose();
+                _device.Dispose();
                 return;
             }
 

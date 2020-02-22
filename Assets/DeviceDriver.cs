@@ -19,11 +19,20 @@ namespace UnitySioTest
             using(var dev = Context.GetInputDevice(index)) return dev.Name;
         }
 
-        public static InputStream OpenStream(int deviceIndex)
+        public static InputStream OpenInputStream(int deviceIndex)
         {
             var stream = new InputStream(Context.GetInputDevice(deviceIndex));
-            _inputStreams.Add(stream);
-            return stream;
+
+            if (stream.IsValid)
+            {
+                _inputStreams.Add(stream);
+                return stream;
+            }
+            else
+            {
+                stream.Dispose();
+                return null;
+            }
         }
 
         #endregion

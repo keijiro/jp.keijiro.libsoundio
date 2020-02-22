@@ -50,8 +50,11 @@ namespace UnitySioTest
             if (_deviceList.value == 0) return;
 
             // Open a new stream.
-            _stream = DeviceDriver.OpenStream(_deviceList.value - 1);
+            _stream = DeviceDriver.OpenInputStream(_deviceList.value - 1);
             _renderer.Stream = _stream;
+
+            // Break if failed to open.
+            if (_stream == null) return;
 
             // Construct the channel list.
             _channelList.ClearOptions();
