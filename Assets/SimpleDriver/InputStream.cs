@@ -27,7 +27,8 @@ namespace SoundIO.SimpleDriver
         public int SampleRate => _stream.SampleRate;
         public float Latency => (float)_stream.SoftwareLatency;
 
-        public bool IsValid => _stream != null && !_stream.IsInvalid;
+        public bool IsValid =>
+            _stream != null && !_stream.IsInvalid && !_stream.IsClosed;
 
         public ReadOnlySpan<byte> LastFrameWindow =>
             new ReadOnlySpan<byte>(_window, 0, _windowSize);
