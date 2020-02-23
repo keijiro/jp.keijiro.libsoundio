@@ -19,6 +19,7 @@ public sealed class DeviceSelector : MonoBehaviour
 
     public int Channel => _channelList.value;
     public int ChannelCount => _stream?.ChannelCount ?? 0;
+    public int SampleRate => _stream?.SampleRate ?? 0;
 
     public ReadOnlySpan<float> AudioData =>
         _stream == null ? ReadOnlySpan<float>.Empty :
