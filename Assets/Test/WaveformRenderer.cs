@@ -45,6 +45,7 @@ public sealed class WaveformRenderer : MonoBehaviour
         if (_mesh == null)
         {
             _mesh = new Mesh();
+            _mesh.bounds = new Bounds(Vector3.zero, Vector3.one * 10);
 
             using (var vertexArray = CreateVertexArray(input, stride, offset))
             {

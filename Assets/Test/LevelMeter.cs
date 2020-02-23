@@ -1,4 +1,5 @@
 using SoundIO.SimpleDriver;
+using Unity.Mathematics;
 using UnityEngine;
 
 public sealed class LevelMeter : MonoBehaviour
@@ -9,7 +10,8 @@ public sealed class LevelMeter : MonoBehaviour
 
     [SerializeField] DeviceSelector _selector = null;
     [SerializeField] FilterMode _filterMode = FilterMode.Bypass;
-    [SerializeField, Range(0, 100)] float _amplitude = 10;
+    [SerializeField] float _range = 60;
+    [SerializeField] RectTransform _meter = null;
 
     #endregion
 
@@ -23,6 +25,7 @@ public sealed class LevelMeter : MonoBehaviour
 
     void Update()
     {
+        // Square sum
         var ss = 0.0f;
 
         if (_filterMode == FilterMode.Bypass)
@@ -47,7 +50,18 @@ public sealed class LevelMeter : MonoBehaviour
             }
         }
 
-        transform.localScale = new Vector3(Mathf.Sqrt(ss) * _amplitude, 1, 1);
+        // Root mean square
+        var rms = math.sqrt(ss / _selector.AudioData.Length);
+
+        // RMS in dBFS
+        // Full scale sin wave = 0 dBFS : refLevel = 1/sqrt(2)
+        const float refLevel = 0.7071f;
+        const float zeroOffset = 1.5849e-13f;
+        var lv = 20 * math.log(rms / refLevel + zeroOffset);
+
+        // Meter scale
+        var sc = math.max(0, _range + lv) / _range;
+        _meter.transform.localScale = new Vector3(sc, 1, 1);
     }
 
     #endregion
