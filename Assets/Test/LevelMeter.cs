@@ -52,6 +52,7 @@ public sealed class LevelMeter : MonoBehaviour
 
         // Root mean square
         var rms = math.sqrt(ss / _selector.AudioData.Length);
+        rms *= _selector.Volume;
 
         // RMS in dBFS
         // Full scale sin wave = 0 dBFS : refLevel = 1/sqrt(2)

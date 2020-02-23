@@ -9,7 +9,6 @@ public sealed class WaveformRenderer : MonoBehaviour
 
     [SerializeField] DeviceSelector _selector = null;
     [SerializeField, Range(16, 1024)] int _resolution = 512;
-    [SerializeField, Range(0, 100)] float _amplitude = 10;
     [SerializeField] Material _material = null;
 
     #endregion
@@ -21,7 +20,7 @@ public sealed class WaveformRenderer : MonoBehaviour
         var span = _selector.AudioData;
         if (span.Length == 0) return;
 
-        UpdateMesh(span, _selector.ChannelCount, _selector.Channel);
+        UpdateMesh(span, _selector.ChannelCount, _selector.Channel, _selector.Volume);
 
         Graphics.DrawMesh(
             _mesh, transform.localToWorldMatrix,
@@ -40,14 +39,14 @@ public sealed class WaveformRenderer : MonoBehaviour
 
     Mesh _mesh;
 
-    void UpdateMesh(ReadOnlySpan<float> input, int stride, int offset)
+    void UpdateMesh(ReadOnlySpan<float> input, int stride, int offset, float amplifier)
     {
         if (_mesh == null)
         {
             _mesh = new Mesh();
             _mesh.bounds = new Bounds(Vector3.zero, Vector3.one * 10);
 
-            using (var vertexArray = CreateVertexArray(input, stride, offset))
+            using (var vertexArray = CreateVertexArray(input, stride, offset, amplifier))
             {
                 _mesh.SetVertexBufferParams(
                     vertexArray.Length,
@@ -66,7 +65,7 @@ public sealed class WaveformRenderer : MonoBehaviour
         }
         else
         {
-            using (var vertexArray = CreateVertexArray(input, stride, offset))
+            using (var vertexArray = CreateVertexArray(input, stride, offset, amplifier))
                 _mesh.SetVertexBufferData(vertexArray, 0, 0, vertexArray.Length);
         }
     }
@@ -92,7 +91,8 @@ public sealed class WaveformRenderer : MonoBehaviour
         return buffer;
     }
 
-    NativeArray<Vector3> CreateVertexArray(ReadOnlySpan<float> input, int stride, int offset)
+    NativeArray<Vector3> CreateVertexArray
+        (ReadOnlySpan<float> input, int stride, int offset, float amplifier)
     {
         var buffer = new NativeArray<Vector3>(
             _resolution,
@@ -107,7 +107,7 @@ public sealed class WaveformRenderer : MonoBehaviour
             var v = input[i];
 
             var x = (float)vi / _resolution;
-            var y = v * _amplitude;
+            var y = v * amplifier;
 
             buffer[offs++] = new Vector3(x, y, 0);
         }

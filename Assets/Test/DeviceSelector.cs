@@ -21,6 +21,8 @@ public sealed class DeviceSelector : MonoBehaviour
     public int ChannelCount => _stream?.ChannelCount ?? 0;
     public int SampleRate => _stream?.SampleRate ?? 0;
 
+    public float Volume { get; set; } = 1;
+
     public ReadOnlySpan<float> AudioData =>
         _stream == null ? ReadOnlySpan<float>.Empty :
             MemoryMarshal.Cast<byte, float>(_stream.LastFrameWindow);
@@ -57,6 +59,17 @@ public sealed class DeviceSelector : MonoBehaviour
     void OnDestroy()
     {
         _stream?.Dispose();
+    }
+
+    void Update()
+    {
+        if (_stream == null) return;
+
+        // Status line
+        _statusText.text =
+            $"Sampling rate: {_stream.SampleRate:n0}Hz / " +
+            $"Software Latency: {_stream.Latency * 1000:n2}ms / " +
+            $"Amplifier: {Volume:P0}";
     }
 
     #endregion
@@ -96,10 +109,6 @@ public sealed class DeviceSelector : MonoBehaviour
             Select(i => new Dropdown.OptionData(){ text = $"Channel {i + 1}" }).ToList();
 
         _channelList.RefreshShownValue();
-
-        // Status line
-        _statusText.text =
-            $"{_stream.SampleRate} Hz {_stream.Latency * 1000} ms software latency";
     }
 
     #endregion
