@@ -460,6 +460,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2711405b083e76e4bad6382e033c30a6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _selector: {fileID: 1695685554}
   _resolution: 512
   _amplitude: 10
   _material: {fileID: 2100000, guid: 7baa6452cd667084e86b064a40321d3b, type: 2}
@@ -2560,7 +2561,6 @@ MonoBehaviour:
   _deviceList: {fileID: 540649018}
   _channelList: {fileID: 301817258}
   _statusText: {fileID: 1837751032}
-  _renderer: {fileID: 132357279}
 --- !u!4 &1695685555
 Transform:
   m_ObjectHideFlags: 0

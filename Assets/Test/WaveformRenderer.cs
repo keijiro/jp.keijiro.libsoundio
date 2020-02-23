@@ -1,6 +1,4 @@
-using SoundIO.SimpleDriver;
 using System;
-using System.Runtime.InteropServices;
 using Unity.Collections;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -9,16 +7,10 @@ public sealed class WaveformRenderer : MonoBehaviour
 {
     #region Editable attributes
 
+    [SerializeField] DeviceSelector _selector = null;
     [SerializeField, Range(16, 1024)] int _resolution = 512;
     [SerializeField, Range(0, 100)] float _amplitude = 10;
     [SerializeField] Material _material = null;
-
-    #endregion
-
-    #region Public property
-
-    public InputStream Stream { get; set; }
-    public int Channel { get; set; }
 
     #endregion
 
@@ -26,12 +18,10 @@ public sealed class WaveformRenderer : MonoBehaviour
 
     void Update()
     {
-        if (Stream == null) return;
-
-        var span = MemoryMarshal.Cast<byte, float>(Stream.LastFrameWindow);
+        var span = _selector.AudioData;
         if (span.Length == 0) return;
 
-        UpdateMesh(span, Stream.ChannelCount, Channel);
+        UpdateMesh(span, _selector.ChannelCount, _selector.Channel);
 
         Graphics.DrawMesh(
             _mesh, transform.localToWorldMatrix,

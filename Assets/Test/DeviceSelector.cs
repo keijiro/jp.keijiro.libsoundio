@@ -1,16 +1,38 @@
 using SoundIO.SimpleDriver;
+using System;
 using System.Linq;
+using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.UI;
 
 public sealed class DeviceSelector : MonoBehaviour
 {
+    #region Editable attributes
+
     [SerializeField] Dropdown _deviceList = null;
     [SerializeField] Dropdown _channelList = null;
     [SerializeField] Text _statusText = null;
-    [SerializeField] WaveformRenderer _renderer = null;
+
+    #endregion
+
+    #region Public properties
+
+    public int Channel => _channelList.value;
+    public int ChannelCount => _stream?.ChannelCount ?? 0;
+
+    public ReadOnlySpan<float> AudioData =>
+        _stream == null ? ReadOnlySpan<float>.Empty :
+            MemoryMarshal.Cast<byte, float>(_stream.LastFrameWindow);
+
+    #endregion
+
+    #region Internal objects
 
     InputStream _stream;
+
+    #endregion
+
+    #region MonoBehaviour implementation
 
     void Start()
     {
@@ -36,11 +58,13 @@ public sealed class DeviceSelector : MonoBehaviour
         _stream?.Dispose();
     }
 
+    #endregion
+
+    #region UI callback
+
     public void OnDeviceSelected(int index)
     {
         // Reset the current state.
-        _renderer.Stream = null;
-
         if (_stream != null)
         {
             _stream.Dispose();
@@ -66,8 +90,6 @@ public sealed class DeviceSelector : MonoBehaviour
             return;
         }
 
-        _renderer.Stream = _stream;
-
         // Construct the channel list.
         _channelList.options = Enumerable.Range(0, _stream.ChannelCount).
             Select(i => new Dropdown.OptionData(){ text = $"Channel {i + 1}" }).ToList();
@@ -78,4 +100,6 @@ public sealed class DeviceSelector : MonoBehaviour
         _statusText.text =
             $"{_stream.SampleRate} Hz {_stream.Latency * 1000} ms software latency";
     }
+
+    #endregion
 }
