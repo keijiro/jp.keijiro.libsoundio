@@ -86,7 +86,6 @@ public sealed class WaveformRenderer : MonoBehaviour
             buffer[offs++] = target + 1;
             target++;
         }
-        target++;
 
         return buffer;
     }

@@ -58,7 +58,7 @@ public sealed class LevelMeter : MonoBehaviour
         // Full scale sin wave = 0 dBFS : refLevel = 1/sqrt(2)
         const float refLevel = 0.7071f;
         const float zeroOffset = 1.5849e-13f;
-        var lv = 20 * math.log(rms / refLevel + zeroOffset);
+        var lv = 20 * math.log10(rms / refLevel + zeroOffset);
 
         // Meter scale
         var sc = math.max(0, _range + lv) / _range;
