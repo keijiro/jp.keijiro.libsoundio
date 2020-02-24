@@ -49,7 +49,7 @@ namespace SoundIO.SimpleDriver
             lock (_ring)
             {
                 // Copy the last frame data into the window buffer.
-                if (_ring.FillCount > _windowSize)
+                if (_ring.FillCount >= _windowSize)
                     _ring.Read(new Span<byte>(_window, 0, _windowSize));
 
                 // Reset the buffer if it's overflowed in the last frame.

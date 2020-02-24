@@ -51,7 +51,7 @@ namespace SoundIO.SimpleDriver
             var head_rp = new Span<byte>(_buffer, 0, rp);
             var wp_tail = new Span<byte>(_buffer, wp, Capacity - wp);
 
-            if (rp > wp || data.Length < wp_tail.Length)
+            if (rp > wp || data.Length <= wp_tail.Length)
             {
                 data.CopyTo(wp_tail);
             }
@@ -94,7 +94,7 @@ namespace SoundIO.SimpleDriver
             var rp = ReadOffset;
             var wp = WriteOffset;
 
-            if (wp > rp || dest.Length < Capacity - rp)
+            if (wp > rp || dest.Length <= Capacity - rp)
             {
                 new Span<byte>(_buffer, rp, dest.Length).CopyTo(dest);
             }

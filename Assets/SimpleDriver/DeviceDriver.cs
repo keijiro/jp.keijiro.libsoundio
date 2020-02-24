@@ -64,13 +64,6 @@ namespace SoundIO.SimpleDriver
 
                 // Install the Player Loop System.
                 InsertPlayerLoopSystem();
-
-                #if UNITY_EDITOR
-                // We use not only PlayerLoopSystem but also the
-                // EditorApplication.update callback because the PlayerLoop
-                // events are not invoked in the edit mode.
-                UnityEditor.EditorApplication.update += () => Update();
-                #endif
             }
 
             return _context;
