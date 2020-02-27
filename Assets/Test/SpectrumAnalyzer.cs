@@ -62,6 +62,17 @@ public sealed class SpectrumAnalyzer : MonoBehaviour
                        + 0.08f * math.cos(4 * math.PI * n / (Resolution - 1))
         ).ToArray();
 
+    // Pre-calculated DFT coefficients
+    float[] _dftCoeffsR =
+        Enumerable.Range(0, Resolution / 2 * Resolution).Select(
+            n => math.cos(2 * math.PI / Resolution * (n / Resolution) * (n % Resolution))
+        ).ToArray();
+
+    float[] _dftCoeffsI =
+        Enumerable.Range(0, Resolution / 2 * Resolution).Select(
+            n => math.cos(2 * math.PI / Resolution * (n / Resolution) * (n % Resolution))
+        ).ToArray();
+
     // Push the input audio data to the internal ring buffer.
     void PushInput(ReadOnlySpan<float> input)
     {
@@ -93,18 +104,19 @@ public sealed class SpectrumAnalyzer : MonoBehaviour
     // Apply DFT to get the spectrum data.
     void AnalyzeSpectrum(ReadOnlySpan<float> input, Span<float> output)
     {
+        var offs = 0;
+
         for (var k = 0; k < Resolution / 2; k++)
         {
-            var TWO_PI_div_N_k = 2 * math.PI / Resolution * k;
-
             var rl = 0.0f;
             var im = 0.0f;
 
             for (var n = 0; n < Resolution; n++)
             {
                 var x_n = input[n];
-                rl += x_n * math.cos(TWO_PI_div_N_k * n);
-                im -= x_n * math.sin(TWO_PI_div_N_k * n);
+                rl += x_n * _dftCoeffsR[offs];
+                im -= x_n * _dftCoeffsI[offs];
+                offs ++;
             }
 
             output[k] = math.sqrt(rl * rl + im * im);
