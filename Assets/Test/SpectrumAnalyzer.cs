@@ -1,13 +1,9 @@
 using SoundIO.SimpleDriver;
 using System;
-using System.Linq;
-using System.Runtime.InteropServices;
 using Unity.Collections;
-using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Rendering;
-using UnityEngine.Profiling;
 
 public sealed class SpectrumAnalyzer : MonoBehaviour
 {
@@ -18,37 +14,43 @@ public sealed class SpectrumAnalyzer : MonoBehaviour
 
     #endregion
 
+    #region Internal objects
+
+    const int Resolution = 512;
+    DftBuffer _dft;
+    Mesh _mesh;
+
+    #endregion
+
     #region MonoBehaviour implementation
+
+    void Start()
+    {
+        _dft = new DftBuffer(Resolution);
+    }
+
+    void OnDestroy()
+    {
+        _dft?.Dispose();
+        if (_mesh != null) Destroy(_mesh);
+    }
 
     void Update()
     {
         _dft.Push(_selector.AudioData);
-        Span<float> f_data = stackalloc float[Resolution / 2];
-        _dft.Analyze(_selector.Volume, f_data);
+        _dft.Analyze(_selector.Volume);
 
-        // Update the line mesh.
-        UpdateMesh(f_data);
+        UpdateMesh(_dft.Spectrum);
 
-        // Draw the line mesh.
         Graphics.DrawMesh(
             _mesh, transform.localToWorldMatrix,
             _material, gameObject.layer
         );
     }
 
-    void OnDestroy()
-    {
-        if (_mesh != null) Destroy(_mesh);
-    }
-
     #endregion
 
-    const int Resolution = 512;
-    DftBuffer _dft = new DftBuffer(Resolution);
-
     #region Mesh generator
-
-    Mesh _mesh;
 
     void UpdateMesh(ReadOnlySpan<float> spectrum)
     {

@@ -1,13 +1,33 @@
 using System;
 using System.Linq;
-using Unity.Collections.LowLevel.Unsafe;
+using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine.Profiling;
 
-public sealed class DftBuffer
+public sealed class DftBuffer : IDisposable
 {
+    #region Public properties
+
     public int Width { get; private set; }
+    public ReadOnlySpan<float> Spectrum => _spectrum.GetReadOnlySpan();
+
+    #endregion
+
+    #region IDisposable implementation
+
+    public void Dispose()
+    {
+        if (_input   .IsCreated) _input   .Dispose();
+        if (_spectrum.IsCreated) _spectrum.Dispose();
+        if (_window  .IsCreated) _window  .Dispose();
+        if (_coeffsR .IsCreated) _coeffsR .Dispose();
+        if (_coeffsI .IsCreated) _coeffsI .Dispose();
+    }
+
+    #endregion
+
+    #region Public methods
 
     public DftBuffer(int width)
     {
@@ -19,127 +39,133 @@ public sealed class DftBuffer
             Select(x => 0.42f - 0.5f * math.cos(x) + 0.08f * math.cos(2 * x));
 
         // DFT coefficients
-        var coeffsR = Enumerable.Range(0, Width / 2 * Width).
+        var coeffs = Enumerable.Range(0, Width / 2 * Width).
             Select(i => (k: i / Width, n: i % Width)).
-            Select(I => math.cos(2 * math.PI / Width * I.k * I.n));
+            Select(I => 2 * math.PI / Width * I.k * I.n);
 
-        var coeffsI = Enumerable.Range(0, Width / 2 * Width).
-            Select(i => (k: i / Width, n: i % Width)).
-            Select(I => math.sin(2 * math.PI / Width * I.k * I.n));
+        var coeffsR = coeffs.Select(x => math.cos(x));
+        var coeffsI = coeffs.Select(x => math.sin(x));
 
-        // Allocation and initialization
-        _buffer = (new float[Width], 0);
-        _window = window.ToArray();
-        _coeffsR = coeffsR.ToArray();
-        _coeffsI = coeffsI.ToArray();
+        // Native array allocation and initialization
+        var ator = Allocator.Persistent;
+        _input    = new NativeArray<float>(Width            , ator);
+        _spectrum = new NativeArray<float>(Width / 2        , ator);
+        _window   = new NativeArray<float>(window .ToArray(), ator);
+        _coeffsR  = new NativeArray<float>(coeffsR.ToArray(), ator);
+        _coeffsI  = new NativeArray<float>(coeffsI.ToArray(), ator);
     }
 
-    // Push audio data to the internal ring buffer.
-    public void Push(ReadOnlySpan<float> input)
+    // Push audio data to the input buffer.
+    public void Push(ReadOnlySpan<float> span)
     {
-        for (var offset = 0; offset < input.Length;)
+        var data = span.GetNativeArray();
+        var length = span.Length;
+
+        if (length == 0) return;
+
+        if (length < Width)
         {
-            var part = math.min(
-                input.Length - offset, // Left in the data buffer
-                Width - _buffer.offset // Remain in the ring buffer
-            );
-
-            // Data copy
-            input.Slice(offset, part).
-                CopyTo(new Span<float>(_buffer.array, _buffer.offset, part));
-
-            // Add the offset values.
-            offset += part;
-            _buffer.offset = (_buffer.offset + part) & (Width - 1);
+            // The data is smaller than the buffer: Dequeue and copy
+            NativeArray<float>.Copy(_input, Width - length, _input, 0, length);
+            NativeArray<float>.Copy(data, 0, _input, Width - length, length);
+        }
+        else
+        {
+            // The data is larger than the buffer: Simple fill
+            NativeArray<float>.Copy(data, length - Width, _input, 0, Width);
         }
     }
 
-    public unsafe void Analyze(float amp, Span<float> output)
+    // Analyze the input buffer to calculate spectrum data.
+    public void Analyze(float amp)
     {
-        // Apply the window function to the contents of the ring buffer.
-        Span<float> data = stackalloc float[Width];
-
-        for (var i = 0; i < Width; i++)
-            data[i] = _window[i] * amp *
-                _buffer.array[(_buffer.offset + i) & (Width - 1)];
-
-        // Apply DFT to get the spectrum data.
         Profiler.BeginSample("Spectrum Analyer DFT");
 
-        fixed (
-            void* I  = &data.GetPinnableReference(),
-                  Cr = &_coeffsR[0],
-                  Ci = &_coeffsI[0],
-                  O  = &output.GetPinnableReference()
-        )
+        using (var temp = AllocateTempJobMemory<float>(Width))
         {
-            var job = new DftJob
+            // Preparation job (window function and amplifier)
+            var job1 = new PreparationJob
             {
-                input   = (float4*)I,
-                coeffsR = (float4*)Cr,
-                coeffsI = (float4*)Ci,
-                output  = (float*)O,
-                steps   = Width / 4
+                input  = _input .Reinterpret<float4>(4),
+                window = _window.Reinterpret<float4>(4),
+                output = temp   .Reinterpret<float4>(4),
+                amplifier = amp
             };
-            job.Schedule(Width / 2, 4).Complete();
+
+            // DFT job
+            var job2 = new DftJob
+            {
+                input   = temp    .Reinterpret<float4>(4),
+                coeffsR = _coeffsR.Reinterpret<float4>(4),
+                coeffsI = _coeffsI.Reinterpret<float4>(4),
+                output  = _spectrum
+            };
+
+            // Dispatch and wait.
+            var handle = new JobHandle();
+            handle = job1.Schedule(Width / 4, handle);
+            handle = job2.Schedule(Width / 2, 4, handle);
+            handle.Complete();
         }
 
         Profiler.EndSample();
     }
 
-    // Input ring buffer
-    (float[] array, int offset) _buffer;
+    #endregion
 
-    // Pre-calculated coefficients
-    float[] _window;
-    float[] _coeffsR;
-    float[] _coeffsI;
+    #region Internal members
 
-    #region Window function job
+    NativeArray<float> _input;
+    NativeArray<float> _spectrum;
+    NativeArray<float> _window;
+    NativeArray<float> _coeffsR;
+    NativeArray<float> _coeffsI;
 
-    /*
-    [Unity.Burst.BurstCompile(CompileSynchronously = true)]
-    unsafe struct WindowJob : IJobFor
+    NativeArray<T> AllocateTempJobMemory<T>(int length) where T : unmanaged
     {
-        // We dare to use raw pointers without safety.
-        [NativeDisableUnsafePtrRestriction] public float4* input;
-        [NativeDisableUnsafePtrRestriction] public float4* window;
-        [NativeDisableUnsafePtrRestriction] public float4* output;
+        return new NativeArray<T>(
+            length, Allocator.TempJob,
+            NativeArrayOptions.UninitializedMemory
+        );
+    }
 
-        public int inputLength;
-        public int inputOffset;
+    #endregion
+
+    #region Preparation job
+
+    [Unity.Burst.BurstCompile(CompileSynchronously = true)]
+    struct PreparationJob : IJobFor
+    {
+        [ReadOnly] public NativeArray<float4> input;
+        [ReadOnly] public NativeArray<float4> window;
+        [WriteOnly] public NativeArray<float4> output;
+
         public float amplifier;
 
         public void Execute(int i)
-        {
-            output[i] = _window[i] * amplifier *
-                input[(inputOffset + i) & (inputLength - 1)];
-        }
+            => output[i] = input[i] * window[i] * amplifier;
     }
-    */
 
     #endregion
 
     #region DFT kernel job
 
     [Unity.Burst.BurstCompile(CompileSynchronously = true)]
-    unsafe struct DftJob : IJobParallelFor
+    struct DftJob : IJobParallelFor
     {
-        // We dare to use raw pointers without safety.
-        [NativeDisableUnsafePtrRestriction] public float4* input;
-        [NativeDisableUnsafePtrRestriction] public float4* coeffsR;
-        [NativeDisableUnsafePtrRestriction] public float4* coeffsI;
-        [NativeDisableUnsafePtrRestriction] public float* output;
-        public int steps;
+        [ReadOnly] public NativeArray<float4> input;
+        [ReadOnly] public NativeArray<float4> coeffsR;
+        [ReadOnly] public NativeArray<float4> coeffsI;
+        [WriteOnly] public NativeArray<float> output;
 
         public void Execute(int i)
         {
-            var offs = i * steps;
+            var offs = i * input.Length;
 
             var rl = 0.0f;
             var im = 0.0f;
 
-            for (var n = 0; n < steps; n++)
+            for (var n = 0; n < input.Length; n++)
             {
                 var x_n = input[n];
                 rl += math.dot(x_n, coeffsR[offs + n]);
