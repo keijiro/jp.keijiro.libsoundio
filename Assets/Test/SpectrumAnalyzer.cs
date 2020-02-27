@@ -1,10 +1,12 @@
 using SoundIO.SimpleDriver;
 using System;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Unity.Collections;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Profiling;
 
 public sealed class SpectrumAnalyzer : MonoBehaviour
 {
@@ -104,6 +106,12 @@ public sealed class SpectrumAnalyzer : MonoBehaviour
     // Apply DFT to get the spectrum data.
     void AnalyzeSpectrum(ReadOnlySpan<float> input, Span<float> output)
     {
+        Profiler.BeginSample("Spectrum Analyer DFT");
+
+        var I = MemoryMarshal.Cast<float, float4>(input);
+        var C_R = MemoryMarshal.Cast<float, float4>(_dftCoeffsR);
+        var C_I = MemoryMarshal.Cast<float, float4>(_dftCoeffsI);
+
         var offs = 0;
 
         for (var k = 0; k < Resolution / 2; k++)
@@ -111,16 +119,18 @@ public sealed class SpectrumAnalyzer : MonoBehaviour
             var rl = 0.0f;
             var im = 0.0f;
 
-            for (var n = 0; n < Resolution; n++)
+            for (var n = 0; n < Resolution / 4; n++)
             {
-                var x_n = input[n];
-                rl += x_n * _dftCoeffsR[offs];
-                im -= x_n * _dftCoeffsI[offs];
+                var x_n = I[n];
+                rl += math.dot(x_n, C_R[offs]);
+                im -= math.dot(x_n, C_I[offs]);
                 offs ++;
             }
 
             output[k] = math.sqrt(rl * rl + im * im);
         }
+
+        Profiler.EndSample();
     }
 
     #endregion
