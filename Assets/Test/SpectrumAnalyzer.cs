@@ -3,6 +3,8 @@ using System;
 using System.Linq;
 using System.Runtime.InteropServices;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
+using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -104,33 +106,55 @@ public sealed class SpectrumAnalyzer : MonoBehaviour
     }
 
     // Apply DFT to get the spectrum data.
-    void AnalyzeSpectrum(ReadOnlySpan<float> input, Span<float> output)
+    unsafe void AnalyzeSpectrum(ReadOnlySpan<float> input, Span<float> output)
     {
         Profiler.BeginSample("Spectrum Analyer DFT");
 
-        var I = MemoryMarshal.Cast<float, float4>(input);
-        var C_R = MemoryMarshal.Cast<float, float4>(_dftCoeffsR);
-        var C_I = MemoryMarshal.Cast<float, float4>(_dftCoeffsI);
+        fixed (
+            void* I  = &input.GetPinnableReference(),
+                  Cr = &_dftCoeffsR[0],
+                  Ci = &_dftCoeffsI[0],
+                  O  = &output.GetPinnableReference()
+        )
+        {
+            var job = new DftJob
+            {
+                I  = (float4*)I,
+                Cr = (float4*)Cr,
+                Ci = (float4*)Ci,
+                O  = (float*)O
+            };
+            job.Schedule(Resolution / 2, 8).Complete();
+        }
 
-        var offs = 0;
+        Profiler.EndSample();
+    }
 
-        for (var k = 0; k < Resolution / 2; k++)
+    [Unity.Burst.BurstCompile(CompileSynchronously = true)]
+    unsafe struct DftJob : IJobParallelFor
+    {
+        [NativeDisableUnsafePtrRestriction] public float4* I;
+        [NativeDisableUnsafePtrRestriction] public float4* Cr;
+        [NativeDisableUnsafePtrRestriction] public float4* Ci;
+        [NativeDisableUnsafePtrRestriction] public float* O;
+
+        public void Execute(int i)
         {
             var rl = 0.0f;
             var im = 0.0f;
 
+            var offs = i * Resolution / 4;
+
             for (var n = 0; n < Resolution / 4; n++)
             {
                 var x_n = I[n];
-                rl += math.dot(x_n, C_R[offs]);
-                im -= math.dot(x_n, C_I[offs]);
+                rl += math.dot(x_n, Cr[offs]);
+                im -= math.dot(x_n, Ci[offs]);
                 offs ++;
             }
 
-            output[k] = math.sqrt(rl * rl + im * im);
+            O[i] = math.sqrt(rl * rl + im * im);
         }
-
-        Profiler.EndSample();
     }
 
     #endregion
