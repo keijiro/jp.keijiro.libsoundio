@@ -2165,7 +2165,7 @@ GameObject:
   - component: {fileID: 757443015}
   - component: {fileID: 757443014}
   m_Layer: 0
-  m_Name: LTC Decoder
+  m_Name: Timecode
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
