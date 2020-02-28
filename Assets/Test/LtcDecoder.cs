@@ -8,6 +8,7 @@ public struct TimeCode
     public int second;
     public int minute;
     public int hour;
+    public bool dropFrame;
 
     static public TimeCode Decode(ulong data)
     {
@@ -21,7 +22,8 @@ public struct TimeCode
             frame  = (s1 & 0xf) + ((s1 >> 8) & 3) * 10,
             second = (s2 & 0xf) + ((s2 >> 8) & 7) * 10,
             minute = (s3 & 0xf) + ((s3 >> 8) & 7) * 10,
-            hour   = (s4 & 0xf) + ((s4 >> 8) & 3) * 10
+            hour   = (s4 & 0xf) + ((s4 >> 8) & 3) * 10,
+            dropFrame = (s1 & 0x400) != 0
         };
     }
 
