@@ -1,4 +1,4 @@
-// Simple example driver for soundio
+// Simple driver for libsoundio
 // https://github.com/keijiro/jp.keijiro.libsoundio
 
 using System;
@@ -11,13 +11,10 @@ namespace SoundIO.SimpleDriver
     // High-level wrapper class for SoundIoInStream
     //
     // - Manages an InStream object.
-    // - Manages the sound input ring buffer.
+    // - Manages a sound input ring buffer.
     // - Provides the "last frame window" that exposes incoming sound data that
-    //   was received in the last frame.
+    //   was received during the last frame.
     // - Implements callback functions for the InStream object.
-    //
-    // Note that the last frame window doesn't provide the data for the ACTUAL
-    // last frame. There must be latency caused by software/hardware.
     //
     public sealed class InputStream : IDisposable
     {
@@ -52,7 +49,8 @@ namespace SoundIO.SimpleDriver
                 if (_ring.FillCount >= _windowSize)
                     _ring.Read(new Span<byte>(_window, 0, _windowSize));
 
-                // Reset the buffer if it's overflowed in the last frame.
+                // Reset the buffer when it detects an overflow.
+                // TODO: Is this the best strategy to deal with overflow?
                 if (_ring.OverflowCount > 0) _ring.Clear();
             }
         }
@@ -75,7 +73,8 @@ namespace SoundIO.SimpleDriver
                 if (_device.Layouts.Length == 0)
                     throw new InvalidOp("No channel layout");
 
-                // Calculate the best latency. FIXME: Use target frame rate?
+                // Calculate the best latency.
+                // TODO: Should we use the target frame rate instead of 1/60?
                 var bestLatency = Math.Max(1.0 / 60, _device.SoftwareLatencyMin);
 
                 // Stream properties
@@ -92,7 +91,9 @@ namespace SoundIO.SimpleDriver
                 if (err != Error.None)
                     throw new InvalidOp($"Stream initialization error ({err})");
 
-                // Determine the buffer size from the actual software latency.
+                // We want the buffers to meet the following requirements:
+                // - Doesn't overflow if the main thread pauses for 4 frames.
+                // - Doesn't overflow if the callback is invoked 4 times a frame.
                 var latency = Math.Max(_stream.SoftwareLatency, bestLatency);
                 var bufferSize = CalculateBufferSize((float)(latency * 4));
 
@@ -105,7 +106,7 @@ namespace SoundIO.SimpleDriver
             }
             catch
             {
-                // Dispose resources on exception.
+                // Dispose the resources on an exception.
                 _stream.Dispose();
                 _device.Dispose();
                 _stream = null;
@@ -126,11 +127,11 @@ namespace SoundIO.SimpleDriver
         InStream _stream;
 
         // Input stream ring buffer
-        // This object will be accessed from both the main and callback thread.
-        // Must be locked when using.
+        // This object will be accessed from both the main/callback thread.
+        // Must be locked when accessing it.
         RingBuffer _ring;
 
-        // Buffer for last frame window
+        // Buffer for the last frame window
         byte[] _window;
         int _windowSize;
 

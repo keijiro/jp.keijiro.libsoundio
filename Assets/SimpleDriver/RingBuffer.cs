@@ -1,4 +1,4 @@
-// Simple example driver for soundio
+// Simple driver for libsoundio
 // https://github.com/keijiro/jp.keijiro.libsoundio
 
 using System;
@@ -6,7 +6,10 @@ using System;
 namespace SoundIO.SimpleDriver
 {
     //
-    // A simple implementation of ring buffer
+    // A simple implementation of a ring buffer
+    //
+    // Note that this class is non-thread safe. The owner class should take
+    // care of race conditions.
     //
     public sealed class RingBuffer
     {

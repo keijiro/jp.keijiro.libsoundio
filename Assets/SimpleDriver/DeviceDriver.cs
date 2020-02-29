@@ -1,4 +1,4 @@
-// Simple example driver for soundio
+// Simple driver for libsoundio
 // https://github.com/keijiro/jp.keijiro.libsoundio
 
 using System.Collections.Generic;
@@ -8,11 +8,13 @@ using UnityEngine.LowLevel;
 namespace SoundIO.SimpleDriver
 {
     //
-    // Singleton device driver class
+    // Singleton-like device driver class
     //
-    // This class manages the single soundio context and input stream objects
-    // created in the context. It also implements a Player Loop System and
-    // invokes the Update methods in the EarlyUpdate phase every frame.
+    // This class manages a soundio context and input stream objects created in
+    // the context. It also implements a Player Loop System and invokes the
+    // Update methods in the EarlyUpdate phase every frame.
+    //
+    // Caveat: Doesn't support device addition/removal during run.
     //
     public static class DeviceDriver
     {
@@ -23,7 +25,7 @@ namespace SoundIO.SimpleDriver
 
         public static string GetDeviceName(int index)
         {
-            using(var dev = Context.GetInputDevice(index))
+            using (var dev = Context.GetInputDevice(index))
                 return dev.IsRaw ? "Raw: " + dev.Name : dev.Name;
         }
 
@@ -88,7 +90,7 @@ namespace SoundIO.SimpleDriver
                 else
                     foundInvalid = true;
 
-            // Reconstruct the input stream list when an invalid one was found.
+            // Reconstruct the input stream list when invalid ones were found.
             if (foundInvalid)
                 _inputStreams = _inputStreams.Where(s => s.IsValid).ToList();
         }
@@ -99,6 +101,8 @@ namespace SoundIO.SimpleDriver
 
         static void InsertPlayerLoopSystem()
         {
+            // Append a custom system to the Early Update phase.
+
             var customSystem = new PlayerLoopSystem()
             {
                 type = typeof(DeviceDriver),
