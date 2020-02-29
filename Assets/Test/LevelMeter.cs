@@ -2,6 +2,8 @@ using SoundIO.SimpleDriver;
 using Unity.Mathematics;
 using UnityEngine;
 
+// Level meter with a low/mid/high filter bank
+
 public sealed class LevelMeter : MonoBehaviour
 {
     #region Editable attributes

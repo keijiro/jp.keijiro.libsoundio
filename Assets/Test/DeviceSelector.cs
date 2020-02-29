@@ -5,6 +5,11 @@ using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.UI;
 
+// Device selector class
+// - Controlls the device selection UI.
+// - Manages SoundIO objects.
+// - Provides audio data for the other scripts.
+
 public sealed class DeviceSelector : MonoBehaviour
 {
     #region Editable attributes
@@ -44,14 +49,14 @@ public sealed class DeviceSelector : MonoBehaviour
         _channelList.ClearOptions();
         _statusText.text = "";
 
-        // Device list initialization
-        _deviceList.options.Add(new Dropdown.OptionData(){ text = "--" });
+        // Null device option
+        _deviceList.options.Add(new Dropdown.OptionData() { text = "--" });
 
-        for (var i = 0; i < DeviceDriver.DeviceCount; i++)
-            _deviceList.options.Add(
-                new Dropdown.OptionData()
-                    { text = DeviceDriver.GetDeviceName(i) }
-            );
+        // Device list initialization
+        _deviceList.options.AddRange(
+            Enumerable.Range(0, DeviceDriver.DeviceCount).
+                Select(i => DeviceDriver.GetDeviceName(i)).
+                Select(name => new Dropdown.OptionData() { text = name }));
 
         _deviceList.RefreshShownValue();
     }
@@ -78,19 +83,19 @@ public sealed class DeviceSelector : MonoBehaviour
 
     public void OnDeviceSelected(int index)
     {
-        // Reset the current state.
+        // Stop and destroy the current stream.
         if (_stream != null)
         {
             _stream.Dispose();
             _stream = null;
         }
 
+        // Reset the UI elements.
         _channelList.ClearOptions();
         _channelList.RefreshShownValue();
-
         _statusText.text = "";
 
-        // Break if no selection.
+        // Break if the null device option was selected.
         if (_deviceList.value == 0) return;
 
         // Open a new stream.
@@ -105,8 +110,11 @@ public sealed class DeviceSelector : MonoBehaviour
         }
 
         // Construct the channel list.
-        _channelList.options = Enumerable.Range(0, _stream.ChannelCount).
-            Select(i => new Dropdown.OptionData(){ text = $"Channel {i + 1}" }).ToList();
+        _channelList.options =
+            Enumerable.Range(0, _stream.ChannelCount).
+            Select(i => $"Channel {i + 1}").
+            Select(text => new Dropdown.OptionData() { text = text }).
+            ToList();
 
         _channelList.RefreshShownValue();
     }

@@ -1,9 +1,10 @@
-using SoundIO.SimpleDriver;
 using System;
+using System.Linq;
 using Unity.Collections;
-using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Rendering;
+
+// DFT spectrogram
 
 public sealed class SpectrumAnalyzer : MonoBehaviour
 {
@@ -40,88 +41,77 @@ public sealed class SpectrumAnalyzer : MonoBehaviour
         _dft.Push(_selector.AudioData);
         _dft.Analyze(_selector.Volume);
 
-        UpdateMesh(_dft.Spectrum);
+        UpdateMesh();
 
         Graphics.DrawMesh(
             _mesh, transform.localToWorldMatrix,
-            _material, gameObject.layer
-        );
+            _material, gameObject.layer);
     }
 
     #endregion
 
     #region Mesh generator
 
-    void UpdateMesh(ReadOnlySpan<float> spectrum)
+    void UpdateMesh()
     {
         if (_mesh == null)
         {
             _mesh = new Mesh();
             _mesh.bounds = new Bounds(Vector3.zero, Vector3.one * 10);
 
-            using (var vertexArray = CreateVertexArray(spectrum))
+            // Initial vertices
+            using (var vertices = CreateVertexArray())
             {
-                _mesh.SetVertexBufferParams(
-                    vertexArray.Length,
-                    new VertexAttributeDescriptor
-                        (VertexAttribute.Position, VertexAttributeFormat.Float32, 3)
-                );
-                _mesh.SetVertexBufferData(vertexArray, 0, 0, vertexArray.Length);
+                var pos = new VertexAttributeDescriptor(
+                    VertexAttribute.Position,
+                    VertexAttributeFormat.Float32, 3);
+
+                _mesh.SetVertexBufferParams(vertices.Length, pos);
+                _mesh.SetVertexBufferData(vertices, 0, 0, vertices.Length);
             }
 
-            using (var indexArray = CreateIndexArray())
+            // Initial indices
+            using (var indices = CreateIndexArray())
             {
-                _mesh.SetIndexBufferParams(indexArray.Length, IndexFormat.UInt32);
-                _mesh.SetIndexBufferData(indexArray, 0, 0, indexArray.Length);
-                _mesh.SetSubMesh(0, new SubMeshDescriptor(0, indexArray.Length, MeshTopology.Lines));
+                _mesh.SetIndexBufferParams(indices.Length, IndexFormat.UInt32);
+                _mesh.SetIndexBufferData(indices, 0, 0, indices.Length);
+
+                var lines = new SubMeshDescriptor(
+                    0, indices.Length, MeshTopology.LineStrip);
+
+                _mesh.SetSubMesh(0, lines);
             }
         }
         else
         {
-            using (var vertexArray = CreateVertexArray(spectrum))
-                _mesh.SetVertexBufferData(vertexArray, 0, 0, vertexArray.Length);
+            // Vertex update
+            using (var vertices = CreateVertexArray())
+                _mesh.SetVertexBufferData(vertices, 0, 0, vertices.Length);
         }
     }
 
-    NativeArray<uint> CreateIndexArray()
+    NativeArray<int> CreateIndexArray()
     {
-        var buffer = new NativeArray<uint>(
-            (Resolution / 2 - 1) * 2,
-            Allocator.Temp, NativeArrayOptions.UninitializedMemory
-        );
-
-        var offs = 0;
-        var target = 0u;
-
-        for (var i = 0; i < Resolution / 2 - 1; i++)
-        {
-            buffer[offs++] = target;
-            buffer[offs++] = target + 1;
-            target++;
-        }
-        target++;
-
-        return buffer;
+        var indices = Enumerable.Range(0, Resolution / 2);
+        return new NativeArray<int>(indices.ToArray(), Allocator.Temp);
     }
 
-    NativeArray<Vector3> CreateVertexArray(ReadOnlySpan<float> spectrum)
+    NativeArray<Vector3> CreateVertexArray()
     {
+        var data = _dft.Spectrum;
+
         var buffer = new NativeArray<Vector3>(
-            Resolution / 2,
-            Allocator.Temp, NativeArrayOptions.UninitializedMemory
-        );
+            Resolution / 2, Allocator.Temp,
+            NativeArrayOptions.UninitializedMemory);
 
-        var offs = 0;
+        const float refLevel = 0.7071f;
+        const float zeroOffset = 1.5849e-13f;
 
         for (var vi = 0; vi < Resolution / 2; vi++)
         {
-            var x = math.log10(vi) / math.log10(Resolution / 2 - 1);
-
-            const float refLevel = 0.7071f;
-            const float zeroOffset = 1.5849e-13f;
-            var y = 20 * math.log10(spectrum[vi] / refLevel + zeroOffset);
-
-            buffer[offs++] = new Vector3(x, y, 0);
+            var x = Mathf.Log10(vi) / Mathf.Log10(Resolution / 2 - 1);
+            var y = 20 * Mathf.Log10(data[vi] / refLevel + zeroOffset);
+            buffer[vi] = new Vector3(x, y, 0);
         }
 
         return buffer;

@@ -2,6 +2,8 @@ using System;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 
+// Extension methods for NativeArray <-> ReadOnlySpan conversion
+
 static class SpanNativeArrayExtensions
 {
     public static NativeArray<T>

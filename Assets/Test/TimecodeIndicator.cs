@@ -1,6 +1,8 @@
 using UnityEngine;
 using UnityEngine.UI;
 
+// LTC (linear timecode) indicator
+
 public sealed class TimecodeIndicator : MonoBehaviour
 {
     [SerializeField] DeviceSelector _selector = null;
@@ -12,6 +14,7 @@ public sealed class TimecodeIndicator : MonoBehaviour
     {
         _decoder.ParseAudioData(_selector.AudioData);
         var tc = _decoder.LastTimecode;
-        _label.text = tc.ToString() + (tc.dropFrame ? " (drop frame)" : " (non-drop frame)");
+        var drop = tc.dropFrame ? " (drop frame)" : " (non-drop frame)";
+        _label.text = tc.ToString() + drop;
     }
 }

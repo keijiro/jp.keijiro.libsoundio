@@ -1,7 +1,10 @@
 using System;
+using System.Linq;
 using Unity.Collections;
 using UnityEngine;
 using UnityEngine.Rendering;
+
+// Raw waveform renderer
 
 public sealed class WaveformRenderer : MonoBehaviour
 {
@@ -17,15 +20,13 @@ public sealed class WaveformRenderer : MonoBehaviour
 
     void Update()
     {
-        var span = _selector.AudioData;
-        if (span.Length == 0) return;
+        if (_selector.AudioData.Length == 0) return;
 
-        UpdateMesh(span, _selector.ChannelCount, _selector.Channel, _selector.Volume);
+        UpdateMesh();
 
         Graphics.DrawMesh(
             _mesh, transform.localToWorldMatrix,
-            _material, gameObject.layer
-        );
+            _material, gameObject.layer);
     }
 
     void OnDestroy()
@@ -39,76 +40,68 @@ public sealed class WaveformRenderer : MonoBehaviour
 
     Mesh _mesh;
 
-    void UpdateMesh(ReadOnlySpan<float> input, int stride, int offset, float amplifier)
+    void UpdateMesh()
     {
         if (_mesh == null)
         {
             _mesh = new Mesh();
             _mesh.bounds = new Bounds(Vector3.zero, Vector3.one * 10);
 
-            using (var vertexArray = CreateVertexArray(input, stride, offset, amplifier))
+            // Initial vertices
+            using (var vertices = CreateVertexArray())
             {
-                _mesh.SetVertexBufferParams(
-                    vertexArray.Length,
-                    new VertexAttributeDescriptor
-                        (VertexAttribute.Position, VertexAttributeFormat.Float32, 3)
-                );
-                _mesh.SetVertexBufferData(vertexArray, 0, 0, vertexArray.Length);
+                var pos = new VertexAttributeDescriptor(
+                    VertexAttribute.Position,
+                    VertexAttributeFormat.Float32, 3);
+
+                _mesh.SetVertexBufferParams(vertices.Length, pos);
+                _mesh.SetVertexBufferData(vertices, 0, 0, vertices.Length);
             }
 
-            using (var indexArray = CreateIndexArray())
+            // Initial indices
+            using (var indices = CreateIndexArray())
             {
-                _mesh.SetIndexBufferParams(indexArray.Length, IndexFormat.UInt32);
-                _mesh.SetIndexBufferData(indexArray, 0, 0, indexArray.Length);
-                _mesh.SetSubMesh(0, new SubMeshDescriptor(0, indexArray.Length, MeshTopology.Lines));
+                _mesh.SetIndexBufferParams(indices.Length, IndexFormat.UInt32);
+                _mesh.SetIndexBufferData(indices, 0, 0, indices.Length);
+
+                var lines = new SubMeshDescriptor(
+                    0, indices.Length, MeshTopology.LineStrip);
+
+                _mesh.SetSubMesh(0, lines);
             }
         }
         else
         {
-            using (var vertexArray = CreateVertexArray(input, stride, offset, amplifier))
-                _mesh.SetVertexBufferData(vertexArray, 0, 0, vertexArray.Length);
+            // Vertex update
+            using (var vertices = CreateVertexArray())
+                _mesh.SetVertexBufferData(vertices, 0, 0, vertices.Length);
         }
     }
 
-    NativeArray<uint> CreateIndexArray()
+    NativeArray<int> CreateIndexArray()
     {
-        var buffer = new NativeArray<uint>(
-            (_resolution - 1) * 2,
-            Allocator.Temp, NativeArrayOptions.UninitializedMemory
-        );
-
-        var offs = 0;
-        var target = 0u;
-
-        for (var i = 0; i < _resolution - 1; i++)
-        {
-            buffer[offs++] = target;
-            buffer[offs++] = target + 1;
-            target++;
-        }
-
-        return buffer;
+        var indices = Enumerable.Range(0, _resolution);
+        return new NativeArray<int>(indices.ToArray(), Allocator.Temp);
     }
 
-    NativeArray<Vector3> CreateVertexArray
-        (ReadOnlySpan<float> input, int stride, int offset, float amplifier)
+    NativeArray<Vector3> CreateVertexArray()
     {
+        var amp = _selector.Volume;
+        var offset = _selector.Channel;
+        var stride = _selector.ChannelCount;
+
+        var data = _selector.AudioData;
+        var count = data.Length / stride;
+
         var buffer = new NativeArray<Vector3>(
-            _resolution,
-            Allocator.Temp, NativeArrayOptions.UninitializedMemory
-        );
-
-        var offs = 0;
+            _resolution, Allocator.Temp,
+            NativeArrayOptions.UninitializedMemory);
 
         for (var vi = 0; vi < _resolution; vi++)
         {
-            var i = (vi * (input.Length / stride) / _resolution) * stride + offset;
-            var v = input[i];
-
             var x = (float)vi / _resolution;
-            var y = v * amplifier;
-
-            buffer[offs++] = new Vector3(x, y, 0);
+            var i = (vi * count / _resolution) * stride + offset;
+            buffer[vi] = new Vector3(x, data[i] * amp, 0);
         }
 
         return buffer;
