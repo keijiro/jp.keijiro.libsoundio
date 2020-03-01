@@ -80,19 +80,18 @@ public sealed class DftBuffer : IDisposable
     }
 
     // Analyze the input buffer to calculate spectrum data.
-    public void Analyze(float amp)
+    public void Analyze()
     {
         Profiler.BeginSample("Spectrum Analyer DFT");
 
         using (var temp = AllocateTempJobMemory<float>(Width))
         {
-            // Preparation job (window function and amplifier)
+            // Preparation job (window function)
             var job1 = new PreparationJob
             {
                 input  = _input .Reinterpret<float4>(4),
                 window = _window.Reinterpret<float4>(4),
                 output = temp   .Reinterpret<float4>(4),
-                amplifier = amp
             };
 
             // DFT job
@@ -139,10 +138,7 @@ public sealed class DftBuffer : IDisposable
         [ReadOnly] public NativeArray<float4> window;
         [WriteOnly] public NativeArray<float4> output;
 
-        public float amplifier;
-
-        public void Execute(int i)
-            => output[i] = input[i] * window[i] * amplifier;
+        public void Execute(int i) => output[i] = input[i] * window[i];
     }
 
     #endregion
@@ -171,7 +167,7 @@ public sealed class DftBuffer : IDisposable
                 im -= math.dot(x_n, coeffsI[offs + n]);
             }
 
-            output[i] = math.sqrt(rl * rl + im * im) / input.Length;
+            output[i] = math.sqrt(rl * rl + im * im) * 0.5f / input.Length;
         }
     }
 

@@ -39,7 +39,7 @@ public sealed class SpectrumAnalyzer : MonoBehaviour
     void Update()
     {
         _dft.Push(_selector.AudioData);
-        _dft.Analyze(_selector.Volume);
+        _dft.Analyze();
 
         UpdateMesh();
 

@@ -29,14 +29,15 @@ public sealed class DeviceSelector : MonoBehaviour
     public float Volume { get; set; } = 1;
 
     public ReadOnlySpan<float> AudioData =>
-        _stream == null ? ReadOnlySpan<float>.Empty :
-            MemoryMarshal.Cast<byte, float>(_stream.LastFrameWindow);
+        new ReadOnlySpan<float>(_audioData, 0, _audioDataFilled);
 
     #endregion
 
     #region Internal objects
 
     InputStream _stream;
+    float[] _audioData = new float[4096];
+    int _audioDataFilled;
 
     #endregion
 
@@ -68,7 +69,21 @@ public sealed class DeviceSelector : MonoBehaviour
 
     void Update()
     {
-        if (_stream == null) return;
+        if (_stream == null)
+        {
+            _audioDataFilled = 0;
+            return;
+        }
+
+        // Strided copy
+        var input = MemoryMarshal.Cast<byte, float>(_stream.LastFrameWindow);
+        var stride = _stream.ChannelCount;
+        var offset = Channel;
+
+        _audioDataFilled = Mathf.Min(input.Length, input.Length / stride);
+
+        for (var i = 0; i < _audioDataFilled; i++)
+            _audioData[i] = input[i * stride + offset] * Volume;
 
         // Status line
         _statusText.text =

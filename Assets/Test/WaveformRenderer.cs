@@ -64,8 +64,8 @@ public sealed class WaveformRenderer : MonoBehaviour
                 _mesh.SetIndexBufferParams(indices.Length, IndexFormat.UInt32);
                 _mesh.SetIndexBufferData(indices, 0, 0, indices.Length);
 
-                var lines = new SubMeshDescriptor(
-                    0, indices.Length, MeshTopology.LineStrip);
+                var lines = new SubMeshDescriptor
+                    (0, indices.Length, MeshTopology.LineStrip);
 
                 _mesh.SetSubMesh(0, lines);
             }
@@ -86,12 +86,7 @@ public sealed class WaveformRenderer : MonoBehaviour
 
     NativeArray<Vector3> CreateVertexArray()
     {
-        var amp = _selector.Volume;
-        var offset = _selector.Channel;
-        var stride = _selector.ChannelCount;
-
         var data = _selector.AudioData;
-        var count = data.Length / stride;
 
         var buffer = new NativeArray<Vector3>(
             _resolution, Allocator.Temp,
@@ -100,8 +95,8 @@ public sealed class WaveformRenderer : MonoBehaviour
         for (var vi = 0; vi < _resolution; vi++)
         {
             var x = (float)vi / _resolution;
-            var i = (vi * count / _resolution) * stride + offset;
-            buffer[vi] = new Vector3(x, data[i] * amp, 0);
+            var i = vi * data.Length / _resolution;
+            buffer[vi] = new Vector3(x, data[i], 0);
         }
 
         return buffer;

@@ -140,7 +140,7 @@ namespace SoundIO.SimpleDriver
         #region Internal function
 
         int CalculateBufferSize(float second) =>
-            sizeof(float) * (int)(ChannelCount * SampleRate * second);
+            sizeof(float) * ChannelCount * (int)(SampleRate * second);
 
         #endregion
 
