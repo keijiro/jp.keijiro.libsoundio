@@ -5,6 +5,8 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine.Profiling;
 
+// DFT with the C# job system and the Burst compiler
+
 public sealed class DftBuffer : IDisposable
 {
     #region Public properties
@@ -33,10 +35,10 @@ public sealed class DftBuffer : IDisposable
     {
         Width = width;
 
-        // Blackman window
+        // Hanning window
         var window = Enumerable.Range(0, Width).
             Select(n => 2 * math.PI * n / (Width - 1)).
-            Select(x => 0.42f - 0.5f * math.cos(x) + 0.08f * math.cos(2 * x));
+            Select(x => 0.5f * (1 - math.cos(x)));
 
         // DFT coefficients
         var coeffs = Enumerable.Range(0, Width / 2 * Width).
@@ -55,7 +57,7 @@ public sealed class DftBuffer : IDisposable
         _coeffsI  = new NativeArray<float>(coeffsI.ToArray(), ator);
     }
 
-    // Push audio data to the input buffer.
+    // Push audio data to the FIFO buffer.
     public void Push(ReadOnlySpan<float> span)
     {
         var data = span.GetNativeArray();
@@ -66,8 +68,9 @@ public sealed class DftBuffer : IDisposable
         if (length < Width)
         {
             // The data is smaller than the buffer: Dequeue and copy
-            NativeArray<float>.Copy(_input, Width - length, _input, 0, length);
-            NativeArray<float>.Copy(data, 0, _input, Width - length, length);
+            var part = Width - length;
+            NativeArray<float>.Copy(_input, Width - part, _input, 0, part);
+            NativeArray<float>.Copy(data, 0, _input, part, length);
         }
         else
         {
@@ -121,13 +124,9 @@ public sealed class DftBuffer : IDisposable
     NativeArray<float> _coeffsR;
     NativeArray<float> _coeffsI;
 
-    NativeArray<T> AllocateTempJobMemory<T>(int length) where T : unmanaged
-    {
-        return new NativeArray<T>(
-            length, Allocator.TempJob,
-            NativeArrayOptions.UninitializedMemory
-        );
-    }
+    NativeArray<T> AllocateTempJobMemory<T>(int size)
+        where T : unmanaged => new NativeArray<T>
+            (size, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
 
     #endregion
 
@@ -172,7 +171,7 @@ public sealed class DftBuffer : IDisposable
                 im -= math.dot(x_n, coeffsI[offs + n]);
             }
 
-            output[i] = math.sqrt(rl * rl + im * im);
+            output[i] = math.sqrt(rl * rl + im * im) / input.Length;
         }
     }
 

@@ -4,7 +4,7 @@ using Unity.Collections;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-// DFT spectrogram
+// DFT spectrum analyzer graph
 
 public sealed class SpectrumAnalyzer : MonoBehaviour
 {
@@ -17,7 +17,7 @@ public sealed class SpectrumAnalyzer : MonoBehaviour
 
     #region Internal objects
 
-    const int Resolution = 512;
+    const int Resolution = 1024;
     DftBuffer _dft;
     Mesh _mesh;
 
@@ -57,7 +57,7 @@ public sealed class SpectrumAnalyzer : MonoBehaviour
         if (_mesh == null)
         {
             _mesh = new Mesh();
-            _mesh.bounds = new Bounds(Vector3.zero, Vector3.one * 10);
+            _mesh.bounds = new Bounds(Vector3.zero, Vector3.one * 1000);
 
             // Initial vertices
             using (var vertices = CreateVertexArray())
