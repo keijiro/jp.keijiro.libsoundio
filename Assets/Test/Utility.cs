@@ -17,8 +17,10 @@ static class SpanNativeArrayExtensions
                     ConvertExistingDataToNativeArray<T>
                         (ptr, span.Length, Allocator.None);
 
+                #if ENABLE_UNITY_COLLECTIONS_CHECKS
                 var handle = AtomicSafetyHandle.GetTempUnsafePtrSliceHandle();
                 NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref array, handle);
+                #endif
 
                 return array;
             }
