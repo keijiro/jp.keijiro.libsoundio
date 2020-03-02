@@ -48,6 +48,8 @@ namespace SoundIO.SimpleDriver
                 // Copy the last frame data into the window buffer.
                 if (_ring.FillCount >= _windowSize)
                     _ring.Read(new Span<byte>(_window, 0, _windowSize));
+                else
+                    _windowSize = 0; // Underflow
 
                 // Reset the buffer when it detects an overflow.
                 // TODO: Is this the best strategy to deal with overflow?
