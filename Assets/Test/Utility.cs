@@ -2,9 +2,9 @@ using System;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 
-// Extension methods for NativeArray <-> ReadOnlySpan conversion
+// Extension methods for NativeSlice <-> ReadOnlySpan conversion
 
-static class SpanNativeArrayExtensions
+static class SpanNativeSliceExtensions
 {
     static AtomicSafetyHandle SpanSafetyHandle
       = GetSpanSafetyHandle();
@@ -17,16 +17,15 @@ static class SpanNativeArrayExtensions
         return _spanSafetyHandle;
     }
 
-    public unsafe static NativeArray<T>
-      GetNativeArray<T>(this ReadOnlySpan<T> span) where T : unmanaged
+    public unsafe static NativeSlice<T>
+      GetNativeSlice<T>(this ReadOnlySpan<T> span) where T : unmanaged
     {
         fixed (void* ptr = &span.GetPinnableReference())
         {
-            var array = NativeArrayUnsafeUtility.
-              ConvertExistingDataToNativeArray<T>
-              (ptr, span.Length, Allocator.None);
+            var array = NativeSliceUnsafeUtility.
+              ConvertExistingDataToNativeSlice<T>(ptr, sizeof(T), span.Length);
             #if ENABLE_UNITY_COLLECTIONS_CHECKS
-            NativeArrayUnsafeUtility.
+            NativeSliceUnsafeUtility.
               SetAtomicSafetyHandle(ref array, SpanSafetyHandle);
             #endif
             return array;
@@ -34,11 +33,11 @@ static class SpanNativeArrayExtensions
     }
 
     public unsafe static ReadOnlySpan<T>
-      GetReadOnlySpan<T>(this NativeArray<T> array) where T : unmanaged
+      GetReadOnlySpan<T>(this NativeSlice<T> slice) where T : unmanaged
     {
         return new Span<T>(
-          NativeArrayUnsafeUtility.GetUnsafeReadOnlyPtr(array),
-          array.Length
+          NativeSliceUnsafeUtility.GetUnsafeReadOnlyPtr(slice),
+          slice.Length
         );
     }
 }

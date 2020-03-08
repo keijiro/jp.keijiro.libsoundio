@@ -24,7 +24,7 @@ public sealed class LevelMeter : MonoBehaviour
     [Unity.Burst.BurstCompile(CompileSynchronously = true)]
     struct FilterRmsJob : IJob
     {
-        [ReadOnly] public NativeArray<float> Input;
+        [ReadOnly] public NativeSlice<float> Input;
         [WriteOnly] public NativeArray<float4> Output;
         public NativeArray<MultibandFilter> Filter;
 
@@ -76,7 +76,7 @@ public sealed class LevelMeter : MonoBehaviour
         tempFilter[0] = _filter;
 
         // Run the job on the main thread.
-        new FilterRmsJob { Input = _selector.AudioData.GetNativeArray(),
+        new FilterRmsJob { Input = _selector.AudioData.GetNativeSlice(),
                            Filter = tempFilter, Output = tempLevel }.Run();
 
         // Preserve the filter state.

@@ -12,7 +12,8 @@ public sealed class DftBuffer : IDisposable
     #region Public properties
 
     public int Width { get; private set; }
-    public ReadOnlySpan<float> Spectrum => _spectrum.GetReadOnlySpan();
+    public ReadOnlySpan<float> Spectrum
+      => new NativeSlice<float>(_spectrum).GetReadOnlySpan();
 
     #endregion
 
@@ -60,7 +61,7 @@ public sealed class DftBuffer : IDisposable
     // Push audio data to the FIFO buffer.
     public void Push(ReadOnlySpan<float> span)
     {
-        var data = span.GetNativeArray();
+        var data = span.GetNativeSlice();
         var length = span.Length;
 
         if (length == 0) return;
@@ -70,12 +71,12 @@ public sealed class DftBuffer : IDisposable
             // The data is smaller than the buffer: Dequeue and copy
             var part = Width - length;
             NativeArray<float>.Copy(_input, Width - part, _input, 0, part);
-            NativeArray<float>.Copy(data, 0, _input, part, length);
+            data.CopyTo(_input.GetSubArray(part, length));
         }
         else
         {
             // The data is larger than the buffer: Simple fill
-            NativeArray<float>.Copy(data, length - Width, _input, 0, Width);
+            data.Slice(length - Width).CopyTo(_input);
         }
     }
 
