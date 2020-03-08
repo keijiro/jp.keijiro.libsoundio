@@ -12,8 +12,7 @@ public sealed class DftBuffer : IDisposable
     #region Public properties
 
     public int Width { get; private set; }
-    public ReadOnlySpan<float> Spectrum
-      => new NativeSlice<float>(_spectrum).GetReadOnlySpan();
+    public ReadOnlySpan<float> Spectrum => _spectrum.GetReadOnlySpan();
 
     #endregion
 

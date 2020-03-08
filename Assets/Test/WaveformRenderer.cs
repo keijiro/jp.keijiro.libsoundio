@@ -20,7 +20,7 @@ public sealed class WaveformRenderer : MonoBehaviour
 
     void Update()
     {
-        if (_selector.AudioData.Length == 0) return;
+        if (_selector.AudioDataSpan.Length == 0) return;
 
         UpdateMesh();
 
@@ -86,7 +86,7 @@ public sealed class WaveformRenderer : MonoBehaviour
 
     NativeArray<Vector3> CreateVertexArray()
     {
-        var data = _selector.AudioData;
+        var data = _selector.AudioDataSpan;
 
         var buffer = new NativeArray<Vector3>(
             _resolution, Allocator.Temp,

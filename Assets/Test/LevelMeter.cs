@@ -76,7 +76,7 @@ public sealed class LevelMeter : MonoBehaviour
         tempFilter[0] = _filter;
 
         // Run the job on the main thread.
-        new FilterRmsJob { Input = _selector.AudioData.GetNativeSlice(),
+        new FilterRmsJob { Input = _selector.AudioDataSlice,
                            Filter = tempFilter, Output = tempLevel }.Run();
 
         // Preserve the filter state.

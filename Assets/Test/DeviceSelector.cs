@@ -2,6 +2,7 @@ using SoundIO.SimpleDriver;
 using System;
 using System.Linq;
 using System.Runtime.InteropServices;
+using Unity.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -28,15 +29,18 @@ public sealed class DeviceSelector : MonoBehaviour
 
     public float Volume { get; set; } = 1;
 
-    public ReadOnlySpan<float> AudioData =>
-        new ReadOnlySpan<float>(_audioData, 0, _audioDataFilled);
+    public ReadOnlySpan<float> AudioDataSpan =>
+        _audioData.GetSubArray(0, _audioDataFilled).GetReadOnlySpan();
+
+    public NativeSlice<float> AudioDataSlice =>
+        new NativeSlice<float>(_audioData, 0, _audioDataFilled);
 
     #endregion
 
     #region Internal objects
 
     InputStream _stream;
-    float[] _audioData = new float[4096];
+    NativeArray<float> _audioData;
     int _audioDataFilled;
 
     #endregion
@@ -45,6 +49,9 @@ public sealed class DeviceSelector : MonoBehaviour
 
     void Start()
     {
+        // Buffer allocation
+        _audioData = new NativeArray<float>(4096, Allocator.Persistent);
+
         // Clear the UI contents.
         _deviceList.ClearOptions();
         _channelList.ClearOptions();
@@ -65,6 +72,7 @@ public sealed class DeviceSelector : MonoBehaviour
     void OnDestroy()
     {
         _stream?.Dispose();
+        _audioData.Dispose();
     }
 
     void Update()

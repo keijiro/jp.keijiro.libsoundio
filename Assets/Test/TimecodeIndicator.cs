@@ -12,7 +12,7 @@ public sealed class TimecodeIndicator : MonoBehaviour
 
     void Update()
     {
-        _decoder.ParseAudioData(_selector.AudioData);
+        _decoder.ParseAudioData(_selector.AudioDataSpan);
         var tc = _decoder.LastTimecode;
         var drop = tc.dropFrame ? " (drop frame)" : " (non-drop frame)";
         _label.text = tc.ToString() + drop;
