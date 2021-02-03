@@ -21,8 +21,8 @@ https://github.com/keijiro/libsoundio
 System Requirements
 -------------------
 
-- Unity 2019.3 or later
-- 64-bit desktop platforms (Windows, macOS, Linux)
+- Unity 2019.4 or later
+- Intel 64-bit desktop platforms (Windows, macOS, Linux)
 
 On Linux, ALSA (libasound2) must be installed on the system.
 
