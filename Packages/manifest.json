@@ -9,6 +9,7 @@
     }
   ],
   "dependencies": {
+    "org.nuget.system.memory": "4.5.3",
     "com.unity.burst": "1.4.4",
     "com.unity.ugui": "1.0.0"
   }

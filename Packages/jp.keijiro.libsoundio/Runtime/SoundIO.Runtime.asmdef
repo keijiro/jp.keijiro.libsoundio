@@ -13,6 +13,12 @@
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
-    "versionDefines": [],
+    "versionDefines": [
+        {
+            "name": "Unity",
+            "expression": "2021.2.0b6",
+            "define": "USE_UNITY_UNSAFE_UTILITY"
+        }
+    ],
     "noEngineReferences": false
 }
