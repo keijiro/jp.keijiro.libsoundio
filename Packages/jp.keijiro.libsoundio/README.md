@@ -30,10 +30,13 @@ How To Install
 --------------
 
 This package uses the [scoped registry] feature to resolve package
-dependencies. Please add the following sections to the manifest file
-(Packages/manifest.json).
+dependencies. Please add the following lines to the manifest file
+(`Packages/manifest.json`).
 
 [scoped registry]: https://docs.unity3d.com/Manual/upm-scoped.html
+
+<details>
+<summary>.NET Standard 2.0 (Unity 2021.1 or earlier)</summary>
 
 To the `scopedRegistries` section:
 
@@ -53,10 +56,11 @@ To the `scopedRegistries` section:
 To the `dependencies` section:
 
 ```
-"jp.keijiro.libsoundio": "1.0.2"
+"org.nuget.system.memory": "4.5.3",
+"jp.keijiro.libsoundio": "1.0.3"
 ```
 
-After changes, the manifest file should look like below:
+After the changes, the manifest file should look like:
 
 ```
 {
@@ -73,6 +77,44 @@ After changes, the manifest file should look like below:
     }
   ],
   "dependencies": {
-    "jp.keijiro.libsoundio": "1.0.2",
+    "org.nuget.system.memory": "4.5.3",
+    "jp.keijiro.libsoundio": "1.0.3",
     ...
 ```
+</details>
+
+<details>
+<summary>.NET Standard 2.1 (Unity 2021.2 or later)</summary>
+
+To the `scopedRegistries` section:
+
+```
+{
+  "name": "Keijiro",
+  "url": "https://registry.npmjs.com",
+  "scopes": [ "jp.keijiro" ]
+}
+```
+
+To the `dependencies` section:
+
+```
+"jp.keijiro.libsoundio": "1.0.3"
+```
+
+After the changes, the manifest file should look like:
+
+```
+{
+  "scopedRegistries": [
+    {
+      "name": "Keijiro",
+      "url": "https://registry.npmjs.com",
+      "scopes": [ "jp.keijiro" ]
+    }
+  ],
+  "dependencies": {
+    "jp.keijiro.libsoundio": "1.0.3",
+    ...
+```
+</details>

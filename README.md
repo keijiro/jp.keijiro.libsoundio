@@ -30,7 +30,7 @@ How To Install
 --------------
 
 This package uses the [scoped registry] feature to resolve package
-dependencies. Please add the following sections to the manifest file
+dependencies. Please add the following lines to the manifest file
 (`Packages/manifest.json`).
 
 [scoped registry]: https://docs.unity3d.com/Manual/upm-scoped.html
