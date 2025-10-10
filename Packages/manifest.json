@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "com.unity.burst": "1.8.19",
+    "com.unity.burst": "1.8.25",
     "com.unity.ugui": "2.0.0"
   }
 }
